@@ -8,7 +8,6 @@ import Link from "next/link";
 import SolarSystem from "./SolarSystem";
 import SolarSearchSidebar from "./SolarSearchSidebar";
 import ScoreSidebar from "./ScoreSidebar";
-import InfoPanel from "./InfoPanel";
 import Rocket from "./Rocket";
 import BlackHole from "./BlackHole";
 import GameHUD from "./GameHUD";
@@ -18,7 +17,9 @@ import HyperparameterPanel from "./HyperparameterPanel";
 import ModelAccuracy from "./ModelAccuracy";
 import ExoplanetPointsAPI from "./ExoplanetPointsAPI";
 import PlanetListPanel from "./PlanetListPanel";
+import PlanetCard from "./PlanetCard";
 import { useStore } from "@/state/useStore";
+import { ApiService, type PlanetData } from "@/services/api";
 
 // 키 입력 상태는 useStore에서 관리
 
@@ -149,8 +150,8 @@ function CameraRig() {
       if (selectedId && bodyPositions[selectedId]) {
         const [px, py, pz] = bodyPositions[selectedId];
 
-        // 외계행성인지 확인 (planet-로 시작하면 외계행성)
-        const isExoplanet = selectedId.startsWith('planet-');
+        // 외계행성인지 확인 (exo-로 시작하면 외계행성)
+        const isExoplanet = selectedId.startsWith("exo-");
 
         if (isExoplanet) {
           // 외계행성: 행성을 바라봄
@@ -167,7 +168,8 @@ function CameraRig() {
 
       // 도착 확인 (외계행성은 더 큰 임계값 사용)
       const distance = Math.hypot(cur.x - tx, cur.y - ty, cur.z - tz);
-      const threshold = selectedId && bodyPositions[selectedId] ? 2.0 : 0.2; // 외계행성은 2.0, 태양계 행성은 0.2
+      const isExoplanet = selectedId && selectedId.startsWith("exo-");
+      const threshold = isExoplanet ? 2.0 : 0.2; // 외계행성은 2.0, 태양계 행성은 0.2
 
       if (distance < threshold) {
         camera.position.set(tx, ty, tz);
@@ -204,6 +206,10 @@ export default function Scene() {
     flyToTarget,
     bodyPositions,
     setKeysPressed,
+    showPlanetCard,
+    setShowPlanetCard,
+    selectedPlanetData,
+    setSelectedPlanetData,
   } = useStore();
   const selectedPlanet = planets.find((p) => p.id === selectedId);
   // 외계행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
@@ -335,22 +341,18 @@ export default function Scene() {
         </div>
       </div>
 
-      {/* 우측 하단 - Planet 정보 (모든 모드에서 표시) */}
-      <div className="pointer-events-none absolute bottom-3 right-3 z-40 space-y-3">
-        <div className="pointer-events-auto bg-black/60 border border-white/15 rounded-xl p-3 backdrop-blur-sm">
-          <InfoPanel />
-        </div>
-        {/* ESC 키 안내 - 카메라가 고정되었을 때만 표시 */}
-        {flyToTarget && (
-          <div className="pointer-events-none bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 backdrop-blur-sm text-white text-xs sm:text-sm text-center">
+      {/* ESC 키 안내 - 카메라가 고정되었을 때만 표시 */}
+      {flyToTarget && (
+        <div className="pointer-events-none absolute bottom-3 right-3 z-40">
+          <div className="pointer-events-auto bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 backdrop-blur-sm text-white text-xs sm:text-sm text-center">
             Press{" "}
             <kbd className="px-1.5 py-0.5 bg-white/20 rounded border border-white/30 font-mono text-[10px] sm:text-xs">
               ESC
             </kbd>{" "}
             to release camera
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Expert 모드 전용 패널들 - 우측 상단 */}
       {mode === "expert" && (
@@ -452,6 +454,18 @@ export default function Scene() {
         {/* 행성 보기(flyTo) 전용 리그 (Player 모드에서만 작동) */}
         <CameraRig />
       </Canvas>
+
+      {/* PlanetCard - 외계행성 클릭 시 표시 */}
+      {showPlanetCard && selectedPlanet && (
+        <PlanetCard
+          planet={selectedPlanet}
+          planetData={selectedPlanetData}
+          onClose={() => {
+            setShowPlanetCard(false);
+            setSelectedPlanetData(null);
+          }}
+        />
+      )}
     </div>
   );
 }

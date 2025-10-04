@@ -95,6 +95,12 @@ type Store = {
     momentum: number;
   };
   setHyperparameters: (params: Partial<Store["hyperparameters"]>) => void;
+
+  // === PlanetCard 상태 ===
+  showPlanetCard: boolean;
+  setShowPlanetCard: (show: boolean) => void;
+  selectedPlanetData: any | null;
+  setSelectedPlanetData: (data: any | null) => void;
 };
 
 export const useStore = create<Store>((set) => ({
@@ -194,4 +200,10 @@ export const useStore = create<Store>((set) => ({
     set((state) => ({
       hyperparameters: { ...state.hyperparameters, ...params },
     })),
+
+  // === PlanetCard 상태 ===
+  showPlanetCard: false,
+  setShowPlanetCard: (show) => set({ showPlanetCard: show }),
+  selectedPlanetData: null,
+  setSelectedPlanetData: (data) => set({ selectedPlanetData: data }),
 }));

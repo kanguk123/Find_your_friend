@@ -55,32 +55,43 @@ export default function PlanetListPanel() {
       })),
     ];
 
-    // 외계행성 데이터 로드
-    fetch("/test.json")
-      .then((res) => res.json())
-      .then((data) => {
-        const exoplanets: Planet[] = data.planets.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          ra: p.ra,
-          dec: p.dec,
-          score: p.score,
-          teq: p.teq,
-          features: p.features,
-        }));
+    // 외계행성 데이터 로드 - 백엔드 API 사용
+    import("../services/api")
+      .then(({ ApiService }) => ApiService.getPlanets())
+      .then((response) => {
+        if (response.success && response.data) {
+          const exoplanets: Planet[] = response.data.map((p: any) => ({
+            id: `exo-${p.id}`, // ID 충돌 방지
+            name: `Planet ${p.rowid}`,
+            ra: p.ra,
+            dec: p.dec,
+            score: p.ai_probability, // AI 확률을 score로 사용
+            disposition: p.disposition,
+            features: {
+              mass: 0, // 백엔드에서 제공되지 않음
+              radius: p.r,
+              orbital_period: 0, // 백엔드에서 제공되지 않음
+              stellar_flux: 0, // 백엔드에서 제공되지 않음
+            },
+          }));
 
-        // 태양계 행성과 외계행성 합치기
-        const allPlanets = [...solarSystemPlanets, ...exoplanets];
-        setPlanets(allPlanets);
-        setStorePlanets(allPlanets); // store에도 업데이트
+          console.log(`Loaded ${exoplanets.length} exoplanets from API`);
+
+          // 태양계 행성과 외계행성 합치기
+          const allPlanets = [...solarSystemPlanets, ...exoplanets];
+          setPlanets(allPlanets);
+          setStorePlanets(allPlanets); // store에도 업데이트
+        } else {
+          throw new Error("Invalid API response");
+        }
       })
       .catch((err) => {
-        console.error("Failed to load exoplanet data:", err);
+        console.error("Failed to load exoplanet data from API:", err);
         // 외계행성 로드 실패 시 태양계 행성만 표시
         setPlanets(solarSystemPlanets);
         setStorePlanets(solarSystemPlanets); // store에도 업데이트
       });
-  }, []);
+  }, [setStorePlanets]);
 
   // 필터링된 행성 목록
   const filteredPlanets = planets.filter((p) => {
@@ -345,6 +356,22 @@ export default function PlanetListPanel() {
                       ) : (
                         // 외계행성 정보
                         <>
+                          {"disposition" in planet && planet.disposition && (
+                            <div>
+                              <span className="text-white/50">Type:</span>
+                              <span
+                                className={`ml-1 font-mono ${
+                                  planet.disposition === "CONFIRMED"
+                                    ? "text-green-400"
+                                    : planet.disposition === "CANDIDATE"
+                                    ? "text-yellow-400"
+                                    : "text-red-400"
+                                }`}
+                              >
+                                {planet.disposition}
+                              </span>
+                            </div>
+                          )}
                           {planet.teq && (
                             <div>
                               <span className="text-white/50">Temp:</span>
@@ -353,7 +380,7 @@ export default function PlanetListPanel() {
                               </span>
                             </div>
                           )}
-                          {planet.ra && planet.dec && (
+                          {planet.ra !== undefined && planet.dec !== undefined && (
                             <div className="col-span-2">
                               <span className="text-white/50">Position:</span>
                               <span className="ml-1 font-mono text-orange-400">

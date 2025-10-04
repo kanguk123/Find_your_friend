@@ -6,19 +6,33 @@ import { SUN, PLANETS } from "@/data/solar";
 
 export default function InfoPanel() {
   const { selectedId, favorites, toggleFavorite, planets } = useStore();
+
+  // 외계행성 데이터를 Planet 타입으로 변환
+  const exoplanets = planets.map((p: any) => ({
+    id: `exo-${p.id}`,
+    name: `Planet ${p.rowid}`,
+    ra: p.ra,
+    dec: p.dec,
+    score: p.ai_probability,
+    disposition: p.disposition,
+    teq: p.teq,
+    features: {
+      mass: 0,
+      radius: p.r,
+      orbital_period: 0,
+      stellar_flux: 0,
+    },
+  }));
+
   // 태양계 행성과 외계행성을 모두 포함하는 배열
-  const all = [SUN, ...PLANETS, ...planets];
+  const all = [SUN, ...PLANETS, ...exoplanets];
   const b = useMemo(
     () => all.find((x) => x.id === selectedId),
     [selectedId, all]
   );
 
   if (!b) {
-    return (
-      <div className="w-full sm:w-64 lg:w-72 text-white/80 text-xs sm:text-sm">
-        <div className="opacity-70">Click a planet to inspect.</div>
-      </div>
-    );
+    return null;
   }
 
   const isFavorite = favorites.has(b.id);
@@ -60,6 +74,23 @@ export default function InfoPanel() {
             RA: {b.ra.toFixed(2)}°, Dec: {b.dec.toFixed(2)}°
           </div>
 
+          {"disposition" in b && b.disposition && (
+            <>
+              <div className="mt-1 text-xs opacity-70">Type</div>
+              <div
+                className={`text-sm ${
+                  b.disposition === "CONFIRMED"
+                    ? "text-green-400"
+                    : b.disposition === "CANDIDATE"
+                    ? "text-yellow-400"
+                    : "text-red-400"
+                }`}
+              >
+                {b.disposition}
+              </div>
+            </>
+          )}
+
           {b.teq && (
             <>
               <div className="mt-1 text-xs opacity-70">
@@ -71,7 +102,7 @@ export default function InfoPanel() {
 
           {b.score && (
             <>
-              <div className="mt-1 text-xs opacity-70">Habitability Score</div>
+              <div className="mt-1 text-xs opacity-70">AI Probability</div>
               <div className="text-sm">{(b.score * 100).toFixed(1)}%</div>
             </>
           )}

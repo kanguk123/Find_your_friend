@@ -2,7 +2,7 @@
  * API 서비스 - 백엔드와의 통신을 담당
  */
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = "http://localhost:8000";
 
 export interface PlanetData {
   id: number;
@@ -10,7 +10,11 @@ export interface PlanetData {
   ra: number;
   dec: number;
   r: number;
-  disposition: 'CANDIDATE' | 'FALSE POSITIVE' | 'CONFIRMED';
+  m?: number; // mass
+  per?: number; // period
+  flux?: number; // stellar flux
+  teq?: number; // equilibrium temperature
+  disposition: "CANDIDATE" | "FALSE POSITIVE" | "CONFIRMED";
   ai_probability: number;
   prediction_label: string | null;
   coordinates_3d: {
@@ -30,15 +34,15 @@ export class ApiService {
   private static async request<T>(endpoint: string): Promise<T> {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error("API request failed:", error);
       throw error;
     }
   }
@@ -47,7 +51,7 @@ export class ApiService {
    * 모든 행성 데이터를 가져옵니다
    */
   static async getPlanets(): Promise<ApiResponse<PlanetData[]>> {
-    return this.request<ApiResponse<PlanetData[]>>('/planets');
+    return this.request<ApiResponse<PlanetData[]>>("/planets");
   }
 
   /**
@@ -61,6 +65,6 @@ export class ApiService {
    * 서버 상태를 확인합니다
    */
   static async getStatus(): Promise<any> {
-    return this.request<any>('/');
+    return this.request<any>("/");
   }
 }
