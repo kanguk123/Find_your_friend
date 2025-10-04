@@ -90,7 +90,11 @@ function CameraRig() {
 
     // Player 모드와 Expert 모드에서 카메라 제어
     // Expert 모드에서는 flyToTarget이 있어도 키보드 이동 허용
-    if ((mode === "player" || mode === "expert") && controls && (mode === "expert" || !flyToTarget)) {
+    if (
+      (mode === "player" || mode === "expert") &&
+      controls &&
+      (mode === "expert" || !flyToTarget)
+    ) {
       const orbitControls = controls as unknown as {
         target: Vector3;
         update: () => void;
@@ -592,7 +596,9 @@ function CoinCounter() {
           <div className="flex items-center gap-2">
             <span className="text-3xl">🪙</span>
             <div>
-              <div className="text-yellow-400 text-2xl font-bold">{coinCount}</div>
+              <div className="text-yellow-400 text-2xl font-bold">
+                {coinCount}
+              </div>
               <div className="text-white/60 text-xs">Coins</div>
             </div>
           </div>
@@ -600,7 +606,9 @@ function CoinCounter() {
           <div className="flex items-center gap-2">
             <span className="text-3xl">🚀</span>
             <div>
-              <div className="text-blue-400 text-2xl font-bold">Level {rocketLevel}</div>
+              <div className="text-blue-400 text-2xl font-bold">
+                Level {rocketLevel}
+              </div>
               <div className="text-white/60 text-xs">
                 {rocketLevel === 1 && "Next: 3 coins"}
                 {rocketLevel === 2 && "Next: 6 coins"}
