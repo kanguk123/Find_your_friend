@@ -3,6 +3,10 @@
 import { useState, useEffect } from "react";
 import { useStore, type Planet } from "@/state/useStore";
 import { SUN, PLANETS } from "@/data/solar";
+import {
+  SolarPlanetClickHandler,
+  ExoplanetClickHandler,
+} from "@/utils/PlanetClickHandler";
 
 export default function PlanetListPanel() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -11,9 +15,13 @@ export default function PlanetListPanel() {
     selectedId,
     setSelectedId,
     setFlyToTarget,
+    setFollowRocket,
+    isCameraMoving,
+    setIsCameraMoving,
     threshold,
     showOnlyFavorites,
     favorites,
+    setPlanets: setStorePlanets,
   } = useStore();
 
   // 태양계 행성과 외계행성 데이터 로드
@@ -59,12 +67,15 @@ export default function PlanetListPanel() {
         }));
 
         // 태양계 행성과 외계행성 합치기
-        setPlanets([...solarSystemPlanets, ...exoplanets]);
+        const allPlanets = [...solarSystemPlanets, ...exoplanets];
+        setPlanets(allPlanets);
+        setStorePlanets(allPlanets); // store에도 업데이트
       })
       .catch((err) => {
         console.error("Failed to load exoplanet data:", err);
         // 외계행성 로드 실패 시 태양계 행성만 표시
         setPlanets(solarSystemPlanets);
+        setStorePlanets(solarSystemPlanets); // store에도 업데이트
       });
   }, []);
 
@@ -84,24 +95,76 @@ export default function PlanetListPanel() {
 
   // 행성 클릭 핸들러
   const handlePlanetClick = (planet: Planet) => {
-    setSelectedId(planet.id);
+    // 태양계 행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
+    const isSolarSystem = planet.ra === undefined || planet.dec === undefined;
+    const clickHandler = isSolarSystem
+      ? new SolarPlanetClickHandler()
+      : new ExoplanetClickHandler();
 
-    // 태양계 행성인지 확인 (ra, dec가 없으면 태양계 행성)
-    if (!planet.ra || !planet.dec) {
-      // 태양계 행성의 경우 태양을 중심으로 한 위치 계산
+    // 첫 번째 클릭: 행성 선택 (하이라이트)
+    const currentSelectedId = useStore.getState().selectedId;
+    if (currentSelectedId !== planet.id) {
+      clickHandler.handleClick(planet);
+      return;
+    }
+
+    // 두 번째 클릭: 카메라 이동 (이미 선택된 행성을 다시 클릭)
+    if (isCameraMoving) {
+      // 이미 카메라가 이동 중이면 무시
+      return;
+    }
+
+    setIsCameraMoving(true);
+
+    // 태양계 행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
+    if (planet.ra === undefined || planet.dec === undefined) {
+      // 태양의 경우 특별 처리 - SolarSystem.tsx와 동일한 로직
+      if (planet.id === "sun") {
+        clickHandler.moveCamera(planet);
+        return;
+      }
+
+      // 다른 태양계 행성의 경우 - SolarSystem.tsx와 동일한 로직 사용
       const solarPlanet = PLANETS.find((p) => p.id === planet.id) || SUN;
       const orbitRadius = solarPlanet.orbitRadius || 0;
-      const angle = Math.random() * Math.PI * 2; // 랜덤 각도
-      const x = orbitRadius * Math.cos(angle);
-      const y = 0;
-      const z = orbitRadius * Math.sin(angle);
 
-      const len = Math.hypot(x, y, z) || 1;
-      const n = [x / len, y / len, z / len];
-      const dist = Math.max(orbitRadius * 0.3, 2); // 궤도 반지름의 30% 또는 최소 2
-      setFlyToTarget([n[0] * dist, n[1] * dist, n[2] * dist]);
+      // 행성 크기에 따라 카메라 거리 조정
+      const planetRadius = solarPlanet.radius * 0.62; // GLOBAL_PLANET_SCALE 적용
+      const cameraDistance = planetRadius * 4.5; // 더 멀리
+
+      // 태양계 행성의 현재 위치 계산 (SolarSystem.tsx와 동일한 로직)
+      const timeScale = 60; // SolarSystem에서 사용하는 timeScale
+      const TAU = Math.PI * 2;
+      const ORBIT_SCALE = 1; // SolarSystem에서 사용하는 ORBIT_SCALE
+
+      const now = Date.now();
+      const seconds = now / 1000;
+      const omega =
+        timeScale === 0
+          ? 0
+          : TAU / ((solarPlanet.periodDays! * 86400) / timeScale);
+      const angle = omega * seconds;
+      const r = orbitRadius * ORBIT_SCALE;
+      const x = r * Math.cos(angle);
+      const y = 0;
+      const z = r * Math.sin(angle);
+
+      // 태양(0, 0, 0)에서 행성으로 향하는 방향 벡터 (정규화)
+      const dirX = x;
+      const dirZ = z;
+      const len = Math.hypot(dirX, dirZ) || 1;
+      const normalX = dirX / len;
+      const normalZ = dirZ / len;
+
+      // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
+      // 행성의 밝은 면을 정면에서 봄
+      const camX = x + normalX * cameraDistance;
+      const camY = y + cameraDistance * 0.15; // 약간 위에서
+      const camZ = z + normalZ * cameraDistance;
+
+      setFlyToTarget([camX, camY, camZ]);
     } else {
-      // 외계행성의 경우 기존 로직 사용
+      // 외계행성의 경우 - ExoplanetPoints.tsx와 동일한 로직 사용
       const phi = (planet.ra * Math.PI) / 180;
       const theta = (planet.dec * Math.PI) / 180;
       const radius = 30;
@@ -111,9 +174,12 @@ export default function PlanetListPanel() {
 
       const len = Math.hypot(x, y, z) || 1;
       const n = [x / len, y / len, z / len];
-      const dist = radius * 0.5;
+      const dist = radius * 1.2; // 외계행성은 작으므로 더 멀리서 관찰
       setFlyToTarget([n[0] * dist, n[1] * dist, n[2] * dist]);
     }
+
+    // 로켓 추적 해제 (카메라가 행성으로 이동)
+    setFollowRocket(false);
   };
 
   return (
@@ -167,16 +233,30 @@ export default function PlanetListPanel() {
           ) : (
             <div className="space-y-2">
               {filteredPlanets.map((planet) => {
-                const isSolarSystem = !planet.ra || !planet.dec;
+                const isSolarSystem =
+                  planet.ra === undefined || planet.dec === undefined;
+                const clickHandler = isSolarSystem
+                  ? new SolarPlanetClickHandler()
+                  : new ExoplanetClickHandler();
+                const visualState = clickHandler.getVisualState(planet);
+                const isMoving = visualState.isSelected && isCameraMoving;
+
                 return (
                   <div
                     key={planet.id}
                     onClick={() => handlePlanetClick(planet)}
                     className={`p-3 rounded-lg cursor-pointer transition-all ${
-                      selectedId === planet.id
-                        ? "bg-purple-500/20 border border-purple-400/50"
+                      visualState.isSelected
+                        ? isMoving
+                          ? "bg-green-500/20 border border-green-400/50"
+                          : "bg-purple-500/20 border border-purple-400/50"
                         : "bg-white/5 hover:bg-white/10 border border-transparent"
                     }`}
+                    style={{
+                      opacity: visualState.isOtherSelected
+                        ? visualState.opacity
+                        : 1,
+                    }}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -186,6 +266,17 @@ export default function PlanetListPanel() {
                         {isSolarSystem && (
                           <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-300 rounded-full">
                             Solar System
+                          </span>
+                        )}
+                        {visualState.isSelected && (
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              isMoving
+                                ? "bg-green-500/20 text-green-300"
+                                : "bg-purple-500/20 text-purple-300"
+                            }`}
+                          >
+                            {isMoving ? "Moving..." : "Selected"}
                           </span>
                         )}
                       </div>
