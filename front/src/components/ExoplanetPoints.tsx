@@ -107,17 +107,25 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
     );
   }, [points, setBodyPositions]);
 
-  console.log("Filtered points:", points.length, "threshold:", threshold);
-  console.log("Dot radius:", dotRadius);
-  console.log(
-    "Sample points:",
-    points.slice(0, 3).map((p) => ({
-      id: p.p.id,
-      score: p.p.score,
-      color: p.color,
-      pos: p.pos,
-    }))
-  );
+  console.log("ExoplanetPoints - Total exoplanets:", exoplanets.length);
+  console.log("ExoplanetPoints - Filtered points:", points.length);
+  console.log("ExoplanetPoints - Threshold:", threshold);
+  console.log("ExoplanetPoints - Dot radius:", dotRadius);
+  console.log("ExoplanetPoints - Show only favorites:", showOnlyFavorites);
+  if (points.length > 0) {
+    console.log(
+      "ExoplanetPoints - Sample points:",
+      points.slice(0, 3).map((p) => ({
+        id: p.p.id,
+        name: p.p.name,
+        score: p.p.score,
+        color: p.color,
+        pos: p.pos,
+      }))
+    );
+  } else {
+    console.warn("ExoplanetPoints - No points to display! Check threshold and favorites filter.");
+  }
 
   const handlePlanetClick = useCallback(
     (p: Planet) => {

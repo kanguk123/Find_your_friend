@@ -145,10 +145,20 @@ function CameraRig() {
         update: () => void;
       };
 
-      // 항상 선택된 행성 또는 태양을 바라봄
+      // 선택된 행성 확인
       if (selectedId && bodyPositions[selectedId]) {
         const [px, py, pz] = bodyPositions[selectedId];
-        orbitControls.target.set(px, py, pz);
+
+        // 외계행성인지 확인 (planet-로 시작하면 외계행성)
+        const isExoplanet = selectedId.startsWith('planet-');
+
+        if (isExoplanet) {
+          // 외계행성: 행성을 바라봄
+          orbitControls.target.set(px, py, pz);
+        } else {
+          // 태양계 행성: 행성을 바라봄
+          orbitControls.target.set(px, py, pz);
+        }
       } else {
         orbitControls.target.set(0, 0, 0);
       }

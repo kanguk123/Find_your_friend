@@ -26,9 +26,9 @@ export function calculatePlayerModeCameraPosition(
   // 카메라 거리 계산
   let cameraDistance: number;
   if (options?.isExoplanet) {
-    // 외계행성: 구의 반경 기준으로 거리 계산
-    const sphereRadius = options.sphereRadius || 30;
-    cameraDistance = sphereRadius * 0.8; // 외계행성 구의 80% 거리 (행성보다 안쪽)
+    // 외계행성: 행성에 가까이 배치 (행성 크기의 5배 거리)
+    const exoplanetVisualRadius = options.exoplanetRadius || 0.6;
+    cameraDistance = exoplanetVisualRadius * 5; // 외계행성을 잘 볼 수 있는 거리
   } else {
     cameraDistance = planetRadius * 4.5; // 태양계 행성
   }
@@ -36,16 +36,16 @@ export function calculatePlayerModeCameraPosition(
   let camX: number, camY: number, camZ: number;
 
   if (options?.isExoplanet) {
-    // 외계행성: Expert 모드와 동일하게 원점 기준으로 카메라 배치
+    // 외계행성: 행성 위치 기준으로 카메라 배치 (행성에서 원점 방향으로)
     const len = Math.hypot(planetX, planetY, planetZ) || 1;
     const normalX = planetX / len;
     const normalY = planetY / len;
     const normalZ = planetZ / len;
 
-    // 원점에서 행성 방향으로 cameraDistance만큼 떨어진 위치 (행성보다 가까이)
-    camX = normalX * cameraDistance;
-    camY = normalY * cameraDistance;
-    camZ = normalZ * cameraDistance;
+    // 행성에서 원점 방향으로 cameraDistance만큼 떨어진 위치
+    camX = planetX - normalX * cameraDistance;
+    camY = planetY - normalY * cameraDistance;
+    camZ = planetZ - normalZ * cameraDistance;
   } else {
     // 태양계 행성: Expert 모드와 동일하게 태양 기준으로 카메라 배치
     const dirX = planetX;
@@ -194,6 +194,7 @@ export function moveSelectedExoplanet(
     setIsCameraMoving,
     setRocketCameraMode,
     setRocketCameraTarget,
+    setCameraPosition,
     mode,
     rocketPosition,
   } = useStore.getState();
@@ -207,8 +208,14 @@ export function moveSelectedExoplanet(
 
   console.log("Exoplanet actual position:", planetPosition);
 
-  // Expert 모드의 초기 카메라 위치를 사용하여 계산
+  // Expert 모드의 초기 카메라 위치
   const INITIAL_CAMERA_POSITION: Vec3 = [0, 0, 4.2];
+
+  // 카메라를 초기 위치로 즉시 설정
+  if (setCameraPosition) {
+    setCameraPosition(INITIAL_CAMERA_POSITION);
+    console.log("Camera position reset to:", INITIAL_CAMERA_POSITION);
+  }
 
   // 모드에 따라 카메라 위치 계산
   let cameraPosition: Vec3;
