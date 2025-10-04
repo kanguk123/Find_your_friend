@@ -21,6 +21,7 @@ export default function PlanetListPanel() {
     threshold,
     showOnlyFavorites,
     favorites,
+    setPlanets: setStorePlanets,
   } = useStore();
 
   // 태양계 행성과 외계행성 데이터 로드
@@ -66,12 +67,15 @@ export default function PlanetListPanel() {
         }));
 
         // 태양계 행성과 외계행성 합치기
-        setPlanets([...solarSystemPlanets, ...exoplanets]);
+        const allPlanets = [...solarSystemPlanets, ...exoplanets];
+        setPlanets(allPlanets);
+        setStorePlanets(allPlanets); // store에도 업데이트
       })
       .catch((err) => {
         console.error("Failed to load exoplanet data:", err);
         // 외계행성 로드 실패 시 태양계 행성만 표시
         setPlanets(solarSystemPlanets);
+        setStorePlanets(solarSystemPlanets); // store에도 업데이트
       });
   }, []);
 

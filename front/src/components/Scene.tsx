@@ -246,6 +246,11 @@ export default function Scene() {
   const { mode, selectedId, setSelectedId, planets, setFlyToTarget } =
     useStore();
   const selectedPlanet = planets.find((p) => p.id === selectedId);
+  // 외계행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
+  const isExoplanet =
+    selectedPlanet &&
+    selectedPlanet.ra !== undefined &&
+    selectedPlanet.dec !== undefined;
 
   // 키보드 입력 처리
   useEffect(() => {
@@ -408,8 +413,8 @@ export default function Scene() {
         </div>
       </div>
 
-      {/* 행성 카드 (선택된 행성이 있을 때) */}
-      {selectedPlanet && (
+      {/* 행성 카드 (태양계 행성만 표시) */}
+      {selectedPlanet && !isExoplanet && (
         <PlanetCard
           planet={selectedPlanet}
           onClose={() => setSelectedId(undefined)}

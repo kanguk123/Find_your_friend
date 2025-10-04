@@ -64,6 +64,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
     setBodyPositions,
     isCameraMoving,
     setIsCameraMoving,
+    setPlanets,
   } = useStore();
   const [exoplanets, setExoplanets] = useState<Planet[]>([]);
 
@@ -84,6 +85,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
         }));
         console.log("Loaded planets:", planets.length);
         setExoplanets(planets);
+        setPlanets(planets); // store에도 업데이트
       })
       .catch((err) => {
         console.error("Failed to load exoplanet data:", err);
