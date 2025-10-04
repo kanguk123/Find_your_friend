@@ -21,6 +21,8 @@ import CSVUploader from "./CSVUploader";
 import HyperparameterPanel from "./HyperparameterPanel";
 import ModelAccuracy from "./ModelAccuracy";
 import ExoplanetLoader from "./ExoplanetLoader";
+import ExoplanetPoints from "./ExoplanetPoints";
+import PlanetListPanel from "./PlanetListPanel";
 import { useStore } from "@/state/useStore";
 
 // 키 입력 상태 관리
@@ -252,6 +254,9 @@ export default function Scene() {
         <div className="relative z-40">
           <FavoriteFilter />
         </div>
+        <div className="pointer-events-auto relative z-30">
+          <PlanetListPanel />
+        </div>
       </div>
 
       {/* 상단 중앙 UI */}
@@ -368,11 +373,8 @@ export default function Scene() {
           <Skybox />
           <SolarSystem timeScale={autoRotate ? 60 : 0.0001} />
 
-          {/* 외계행성 표시 */}
-          <group position={[-15, 0, 0]}>
-            <GlobeBase />
-            <PlanetsPoints radius={1.6} />
-          </group>
+          {/* 외계행성 표시 - 태양계 바깥쪽 */}
+          <ExoplanetPoints radius={30} />
 
           {/* 로켓은 Player 모드에서만 표시 */}
           {mode === "player" && <Rocket />}

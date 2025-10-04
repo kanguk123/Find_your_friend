@@ -1,0 +1,422 @@
+{
+  "planets": [
+    {
+      "id": "planet-001",
+      "name": "Kepler-442b",
+      "ra": 285.697,
+      "dec": 39.172,
+      "score": 0.89,
+      "teq": 233,
+      "features": {
+        "mass": 2.3,
+        "radius": 1.34,
+        "orbital_period": 112.3,
+        "stellar_flux": 0.41,
+        "stellar_radius": 0.6,
+        "stellar_teff": 4402,
+        "stellar_mass": 0.61,
+        "stellar_metallicity": -0.37,
+        "transit_duration": 2.1,
+        "impact_parameter": 0.3,
+        "transit_depth": 0.0008,
+        "semi_major_axis": 0.409,
+        "eccentricity": 0.04,
+        "inclination": 89.97,
+        "longitude_periastron": 90.0
+      },
+      "metadata": {
+        "discovery_method": "transit",
+        "discovery_year": 2015,
+        "observatory": "Kepler",
+        "data_quality": "high",
+        "last_updated": "2024-01-15T10:30:00Z"
+      },
+      "habitability": {
+        "hsi": 0.84,
+        "esi": 0.91,
+        "cdpp": 0.12,
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "planet-002",
+      "name": "TOI-715b",
+      "ra": 192.456,
+      "dec": -65.123,
+      "score": 0.76,
+      "teq": 198,
+      "features": {
+        "mass": 1.55,
+        "radius": 1.55,
+        "orbital_period": 19.3,
+        "stellar_flux": 0.67,
+        "stellar_radius": 0.4,
+        "stellar_teff": 3240,
+        "stellar_mass": 0.25,
+        "stellar_metallicity": 0.0,
+        "transit_duration": 1.8,
+        "impact_parameter": 0.1,
+        "transit_depth": 0.0021,
+        "semi_major_axis": 0.102,
+        "eccentricity": 0.0,
+        "inclination": 89.5,
+        "longitude_periastron": 0.0
+      },
+      "metadata": {
+        "discovery_method": "transit",
+        "discovery_year": 2023,
+        "observatory": "TESS",
+        "data_quality": "high",
+        "last_updated": "2024-02-20T14:15:00Z"
+      },
+      "habitability": {
+        "hsi": 0.78,
+        "esi": 0.85,
+        "cdpp": 0.08,
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "planet-003",
+      "name": "GJ 357d",
+      "ra": 92.234,
+      "dec": -21.567,
+      "score": 0.82,
+      "teq": 217,
+      "features": {
+        "mass": 6.1,
+        "radius": 2.13,
+        "orbital_period": 55.7,
+        "stellar_flux": 0.38,
+        "stellar_radius": 0.34,
+        "stellar_teff": 3505,
+        "stellar_mass": 0.34,
+        "stellar_metallicity": -0.12,
+        "transit_duration": 2.3,
+        "impact_parameter": 0.2,
+        "transit_depth": 0.0015,
+        "semi_major_axis": 0.204,
+        "eccentricity": 0.22,
+        "inclination": 89.3,
+        "longitude_periastron": 45.0
+      },
+      "metadata": {
+        "discovery_method": "transit",
+        "discovery_year": 2019,
+        "observatory": "TESS",
+        "data_quality": "medium",
+        "last_updated": "2024-01-08T09:45:00Z"
+      },
+      "habitability": {
+        "hsi": 0.71,
+        "esi": 0.88,
+        "cdpp": 0.15,
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "planet-004",
+      "name": "TRAPPIST-1e",
+      "ra": 346.62,
+      "dec": -5.04,
+      "score": 0.95,
+      "teq": 251,
+      "features": {
+        "mass": 0.69,
+        "radius": 0.92,
+        "orbital_period": 6.1,
+        "stellar_flux": 0.65,
+        "stellar_radius": 0.12,
+        "stellar_teff": 2559,
+        "stellar_mass": 0.08,
+        "stellar_metallicity": 0.04,
+        "transit_duration": 0.8,
+        "impact_parameter": 0.05,
+        "transit_depth": 0.0051,
+        "semi_major_axis": 0.029,
+        "eccentricity": 0.0,
+        "inclination": 89.8,
+        "longitude_periastron": 0.0
+      },
+      "metadata": {
+        "discovery_method": "transit",
+        "discovery_year": 2017,
+        "observatory": "Spitzer",
+        "data_quality": "high",
+        "last_updated": "2024-03-10T16:20:00Z"
+      },
+      "habitability": {
+        "hsi": 0.92,
+        "esi": 0.95,
+        "cdpp": 0.05,
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "planet-005",
+      "name": "LHS 1140b",
+      "ra": 0.0,
+      "dec": -15.0,
+      "score": 0.88,
+      "teq": 230,
+      "features": {
+        "mass": 6.6,
+        "radius": 1.7,
+        "orbital_period": 24.7,
+        "stellar_flux": 0.46,
+        "stellar_radius": 0.21,
+        "stellar_teff": 3131,
+        "stellar_mass": 0.15,
+        "stellar_metallicity": -0.24,
+        "transit_duration": 1.9,
+        "impact_parameter": 0.15,
+        "transit_depth": 0.0032,
+        "semi_major_axis": 0.093,
+        "eccentricity": 0.0,
+        "inclination": 89.9,
+        "longitude_periastron": 0.0
+      },
+      "metadata": {
+        "discovery_method": "transit",
+        "discovery_year": 2017,
+        "observatory": "MEarth",
+        "data_quality": "high",
+        "last_updated": "2024-02-28T11:30:00Z"
+      },
+      "habitability": {
+        "hsi": 0.86,
+        "esi": 0.93,
+        "cdpp": 0.09,
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "planet-006",
+      "name": "Proxima Centauri b",
+      "ra": 217.428,
+      "dec": -62.679,
+      "score": 0.74,
+      "teq": 234,
+      "features": {
+        "mass": 1.27,
+        "radius": 1.08,
+        "orbital_period": 11.2,
+        "stellar_flux": 0.65,
+        "stellar_radius": 0.14,
+        "stellar_teff": 3042,
+        "stellar_mass": 0.12,
+        "stellar_metallicity": 0.21,
+        "transit_duration": 0.5,
+        "impact_parameter": 0.0,
+        "transit_depth": 0.0003,
+        "semi_major_axis": 0.0485,
+        "eccentricity": 0.0,
+        "inclination": 90.0,
+        "longitude_periastron": 0.0
+      },
+      "metadata": {
+        "discovery_method": "radial_velocity",
+        "discovery_year": 2016,
+        "observatory": "ESO",
+        "data_quality": "high",
+        "last_updated": "2024-03-15T08:45:00Z"
+      },
+      "habitability": {
+        "hsi": 0.79,
+        "esi": 0.87,
+        "cdpp": 0.11,
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "planet-007",
+      "name": "Wolf 1061c",
+      "ra": 247.35,
+      "dec": -12.78,
+      "score": 0.71,
+      "teq": 223,
+      "features": {
+        "mass": 4.25,
+        "radius": 1.64,
+        "orbital_period": 17.9,
+        "stellar_flux": 0.53,
+        "stellar_radius": 0.29,
+        "stellar_teff": 3342,
+        "stellar_mass": 0.25,
+        "stellar_metallicity": 0.0,
+        "transit_duration": 1.2,
+        "impact_parameter": 0.1,
+        "transit_depth": 0.0018,
+        "semi_major_axis": 0.089,
+        "eccentricity": 0.11,
+        "inclination": 89.6,
+        "longitude_periastron": 30.0
+      },
+      "metadata": {
+        "discovery_method": "radial_velocity",
+        "discovery_year": 2015,
+        "observatory": "HARPS",
+        "data_quality": "medium",
+        "last_updated": "2024-01-22T13:15:00Z"
+      },
+      "habitability": {
+        "hsi": 0.73,
+        "esi": 0.82,
+        "cdpp": 0.18,
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "planet-008",
+      "name": "Ross 128b",
+      "ra": 176.35,
+      "dec": 0.8,
+      "score": 0.77,
+      "teq": 213,
+      "features": {
+        "mass": 1.35,
+        "radius": 1.12,
+        "orbital_period": 9.9,
+        "stellar_flux": 0.38,
+        "stellar_radius": 0.2,
+        "stellar_teff": 3192,
+        "stellar_mass": 0.17,
+        "stellar_metallicity": 0.0,
+        "transit_duration": 0.7,
+        "impact_parameter": 0.05,
+        "transit_depth": 0.0009,
+        "semi_major_axis": 0.049,
+        "eccentricity": 0.0,
+        "inclination": 89.9,
+        "longitude_periastron": 0.0
+      },
+      "metadata": {
+        "discovery_method": "radial_velocity",
+        "discovery_year": 2017,
+        "observatory": "HARPS",
+        "data_quality": "high",
+        "last_updated": "2024-02-14T10:30:00Z"
+      },
+      "habitability": {
+        "hsi": 0.81,
+        "esi": 0.89,
+        "cdpp": 0.07,
+        "noise_level": "low"
+      }
+    },
+    {
+      "id": "planet-009",
+      "name": "GJ 273b",
+      "ra": 110.0,
+      "dec": 17.0,
+      "score": 0.68,
+      "teq": 259,
+      "features": {
+        "mass": 2.89,
+        "radius": 1.51,
+        "orbital_period": 18.6,
+        "stellar_flux": 1.06,
+        "stellar_radius": 0.29,
+        "stellar_teff": 3382,
+        "stellar_mass": 0.29,
+        "stellar_metallicity": 0.0,
+        "transit_duration": 1.5,
+        "impact_parameter": 0.2,
+        "transit_depth": 0.0023,
+        "semi_major_axis": 0.091,
+        "eccentricity": 0.0,
+        "inclination": 89.4,
+        "longitude_periastron": 0.0
+      },
+      "metadata": {
+        "discovery_method": "radial_velocity",
+        "discovery_year": 2017,
+        "observatory": "HARPS",
+        "data_quality": "medium",
+        "last_updated": "2024-01-30T15:45:00Z"
+      },
+      "habitability": {
+        "hsi": 0.69,
+        "esi": 0.78,
+        "cdpp": 0.22,
+        "noise_level": "medium"
+      }
+    },
+    {
+      "id": "planet-010",
+      "name": "Teegarden's Star b",
+      "ra": 43.27,
+      "dec": 16.88,
+      "score": 0.93,
+      "teq": 264,
+      "features": {
+        "mass": 1.05,
+        "radius": 1.02,
+        "orbital_period": 4.9,
+        "stellar_flux": 0.37,
+        "stellar_radius": 0.11,
+        "stellar_teff": 2904,
+        "stellar_mass": 0.09,
+        "stellar_metallicity": 0.0,
+        "transit_duration": 0.3,
+        "impact_parameter": 0.0,
+        "transit_depth": 0.0002,
+        "semi_major_axis": 0.025,
+        "eccentricity": 0.0,
+        "inclination": 90.0,
+        "longitude_periastron": 0.0
+      },
+      "metadata": {
+        "discovery_method": "radial_velocity",
+        "discovery_year": 2019,
+        "observatory": "CARMENES",
+        "data_quality": "high",
+        "last_updated": "2024-03-05T12:00:00Z"
+      },
+      "habitability": {
+        "hsi": 0.94,
+        "esi": 0.96,
+        "cdpp": 0.04,
+        "noise_level": "low"
+      }
+    }
+  ],
+  "metadata": {
+    "total_planets": 10,
+    "data_version": "1.0",
+    "generated_at": "2024-03-20T00:00:00Z",
+    "description": "Sample exoplanet data for NASA Space App Challenge - Planet Finder",
+    "features_used": [
+      "ra",
+      "dec",
+      "score",
+      "teq",
+      "mass",
+      "radius",
+      "orbital_period",
+      "stellar_flux",
+      "stellar_radius",
+      "stellar_teff",
+      "stellar_mass",
+      "stellar_metallicity",
+      "transit_duration",
+      "impact_parameter",
+      "transit_depth",
+      "semi_major_axis",
+      "eccentricity",
+      "inclination",
+      "longitude_periastron"
+    ],
+    "habitability_metrics": ["hsi", "esi", "cdpp", "noise_level"],
+    "discovery_methods": ["transit", "radial_velocity"],
+    "observatories": [
+      "Kepler",
+      "TESS",
+      "Spitzer",
+      "MEarth",
+      "ESO",
+      "HARPS",
+      "CARMENES"
+    ]
+  }
+}
