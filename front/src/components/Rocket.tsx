@@ -14,6 +14,7 @@ import dynamic from "next/dynamic";
 
 // 🚀 SpaceX GLB 로더 (클라이언트 전용)
 const SpaceXRocket = dynamic(() => import("./SpaceXRocket"), { ssr: false });
+const RocketFlame = dynamic(() => import("./RocketFlame"), { ssr: false });
 
 /* ===== 공용 타입 유틸 ===== */
 type Vec3 = [number, number, number];
@@ -74,6 +75,7 @@ export default function Rocket() {
   const euler = useMemo(() => new Euler(0, 0, 0, "YXZ"), []);
   const vel = useRef(0);
   const boosting = useRef(false);
+  const flameIntensity = useRef(0); // Use ref to avoid re-renders
 
   const [spawned, setSpawned] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -167,7 +169,7 @@ export default function Rocket() {
       anyInput = true;
     }
 
-    // 스페이스바: 로켓 시점으로 돌아가기 또는 부스트
+    // 스페이스바: 로켓 시점으로 돌아가기
     if (key.down("Space")) {
       if (rocketCameraMode === "planet_view") {
         // 행성 뷰 모드에서 스페이스바: 로켓 시점으로 돌아가기
@@ -178,11 +180,13 @@ export default function Rocket() {
         setIsCameraMoving(false);
         console.log("로켓 시점으로 돌아갑니다");
         anyInput = true;
-      } else {
-        // 일반 모드에서 스페이스바: 부스트
-        boosting.current = thrust >= 0 || vel.current >= 0;
-        anyInput = true;
       }
+    }
+
+    // Shift 키: 부스트 + 화염 효과
+    if (key.down("ShiftLeft") || key.down("ShiftRight")) {
+      boosting.current = thrust >= 0 || vel.current >= 0;
+      anyInput = true;
     } else {
       boosting.current = false;
     }
@@ -268,11 +272,15 @@ export default function Rocket() {
   }
 
   useFrame((_, dt) => {
-    if (!rocketAlive || !spawned || !visible) return;
+    if (!rocketAlive || !spawned || !visible) {
+      flameIntensity.current = 0;
+      return;
+    }
 
     // 행성 뷰 모드에서는 로켓 움직임을 멈추고 카메라만 타겟을 따라간다
     if (rocketCameraMode === "planet_view") {
       vel.current = 0;
+      flameIntensity.current = 0;
       updateKinematics(dt);
       return;
     }
@@ -280,6 +288,7 @@ export default function Rocket() {
     // 기존 행성 포커스 모드
     if (!followRocket && flyToTargetRaw) {
       vel.current = 0;
+      flameIntensity.current = 0;
       updateKinematics(dt);
       return;
     }
@@ -287,6 +296,10 @@ export default function Rocket() {
     // 로켓 추적 모드
     updateInputs(dt);
     updateKinematics(dt);
+
+    // Update flame intensity based on boost state
+    // Only show flame when Shift is pressed
+    flameIntensity.current = boosting.current ? 1.0 : 0.0;
   });
 
   return (
@@ -306,6 +319,8 @@ export default function Rocket() {
         <hemisphereLight intensity={0.12} />
         <group rotation={visualRotation}>
           <SpaceXRocket scaleToMeters={0.2} rotation={[0, Math.PI / 6, 0]} />
+          {/* Rocket flame - only when visible, controlled by intensity */}
+          {visible && <RocketFlame intensity={flameIntensity.current} position={[0, 0, 0.12]} />}
         </group>
       </group>
     </>
