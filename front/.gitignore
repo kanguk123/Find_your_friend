@@ -17,3 +17,6 @@ dist/
 # Editor/OS
 .DS_Store
 .idea/
+
+# Three.js
+three.js/
