@@ -1,12 +1,41 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useThree } from "@react-three/fiber";
+import { MathUtils, Vector3 } from "three";
 import { useStore } from "../state/useStore";
 import { ApiService, PlanetData } from "../services/api";
 
-const SURFACE_OFFSET = 0.1;
+// 지구 렌더링 크기 상수 (행성 반지름으로 사용)
+const EARTH_RENDER_SIZE = 0.13 * 0.62;
+
+/** 화면(세로/가로) FOV를 모두 고려해, 반지름 r인 구가 프레임에 충분히 들어오도록 하는 최소 거리 계산 */
+function distanceToFitSphere({
+  radius,
+  fovDeg,
+  aspect,
+  fitRatio = 0.6, // 화면 높이(또는 너비) 대비 구가 차지할 비율 (0~1)
+  padding = 1.15, // 살짝 여유
+}: {
+  radius: number;
+  fovDeg: number;
+  aspect: number;
+  fitRatio?: number;
+  padding?: number;
+}) {
+  // 세로 FOV
+  const vFov = MathUtils.degToRad(fovDeg);
+  const vDist = (radius * 2 * padding) / (2 * Math.tan(vFov / 2)) / fitRatio;
+
+  // 가로 FOV = 2 * atan(tan(vFov/2) * aspect)
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
+  const hDist = (radius * 2 * padding) / (2 * Math.tan(hFov / 2)) / fitRatio;
+
+  return Math.max(vDist, hDist);
+}
 
 export default function ExoplanetPointsAPI() {
+  const { camera, viewport } = useThree(); // <- 카메라와 화면 비율 사용
   const [planets, setPlanets] = useState<PlanetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +61,6 @@ export default function ExoplanetPointsAPI() {
         if (response.success) {
           setPlanets(response.data);
 
-          // bodyPositions에 행성 위치 저장 (외계행성은 "exo-" 접두사 사용)
           const positions: Record<string, [number, number, number]> = {};
           response.data.forEach((planet) => {
             positions[`exo-${planet.id}`] = [
@@ -62,92 +90,95 @@ export default function ExoplanetPointsAPI() {
   const handlePlanetClick = (planetId: number, planet: PlanetData) => {
     console.log("행성 클릭:", planetId, planet.disposition);
 
-    // 선택된 행성 ID 설정 (외계행성은 "exo-" 접두사 사용)
-    setSelectedId(`exo-${planetId}`);
+    const exoId = `exo-${planetId}`;
+    const isAlreadySelected = selectedId === exoId;
 
-    // PlanetCard 표시를 위한 데이터 설정
+    setSelectedId(exoId);
     setSelectedPlanetData(planet);
     setShowPlanetCard(true);
 
-    // 행성 위치
-    const planetPos: [number, number, number] = [
-      planet.coordinates_3d.x,
-      planet.coordinates_3d.y,
-      planet.coordinates_3d.z,
-    ];
-
-    // bodyPositions에 저장 (이미 useEffect에서 저장되어 있어야 하지만, 확실히 하기 위해)
+    // bodyPositions 보강
     setBodyPositions({
       ...bodyPositions,
-      [`exo-${planetId}`]: planetPos,
+      [exoId]: [
+        planet.coordinates_3d.x,
+        planet.coordinates_3d.y,
+        planet.coordinates_3d.z,
+      ],
     });
 
-    // 행성 위치에서 약간 떨어진 카메라 위치 계산
-    const calculateCameraOffset = (
-      pos: [number, number, number],
-      radius: number
-    ): [number, number, number] => {
-      // 행성 반지름 기반 거리 계산 (최소 1.5, 최대 5.0)
-      const minDistance = 1.5;
-      const maxDistance = 5.0;
-      const baseDistance = Math.max(
-        minDistance,
-        Math.min(radius * 2, maxDistance)
-      );
-
-      // 행성 위치의 정규화된 방향 벡터 계산 (원점에서 행성으로)
-      const length = Math.sqrt(pos[0] ** 2 + pos[1] ** 2 + pos[2] ** 2);
-
-      if (length > 0.001) {
-        // 행성이 원점에서 멀리 있는 경우: 원점 방향에서 약간 오프셋
-        const dirX = pos[0] / length;
-        const dirY = pos[1] / length;
-        const dirZ = pos[2] / length;
-
-        return [
-          pos[0] + dirX * baseDistance * 0.5,
-          pos[1] + dirY * baseDistance * 0.5 + baseDistance * 0.3, // 약간 위에서
-          pos[2] + dirZ * baseDistance * 0.5 + baseDistance * 0.7, // 약간 뒤에서
-        ];
-      } else {
-        // 행성이 원점 근처에 있는 경우: 단순히 z축 방향으로 오프셋
-        return [pos[0], pos[1] + baseDistance * 0.3, pos[2] + baseDistance];
-      }
-    };
-
-    const cameraPos = calculateCameraOffset(planetPos, planet.r);
-
-    console.log(
-      "Flying to exoplanet:",
-      planetId,
-      "planet position:",
-      planetPos,
-      "camera position:",
-      cameraPos,
-      "distance from planet:",
-      Math.sqrt(
-        (cameraPos[0] - planetPos[0]) ** 2 +
-          (cameraPos[1] - planetPos[1]) ** 2 +
-          (cameraPos[2] - planetPos[2]) ** 2
-      ).toFixed(2)
-    );
-
-    if (mode === "player") {
-      // Player 모드: 로켓 카메라 모드로 전환
-      const { setRocketCameraMode, setRocketCameraTarget, setIsCameraMoving } =
-        useStore.getState();
-      setRocketCameraMode("planet_view");
-      setRocketCameraTarget(`exo-${planetId}`);
-      setIsCameraMoving(true);
-      console.log("로켓 카메라 모드로 전환:", planetId);
-
-      setFlyToTarget(cameraPos);
-    } else {
-      // Expert 모드: 카메라 이동
+    // 이미 선택된 행성을 다시 클릭한 경우에만 카메라 이동
+    if (isAlreadySelected) {
       const { setIsCameraMoving } = useStore.getState();
       setIsCameraMoving(true);
 
-      setFlyToTarget(cameraPos);
+      // 행성 위치 벡터
+      const planetPos = new Vector3(
+        planet.coordinates_3d.x,
+        planet.coordinates_3d.y,
+        planet.coordinates_3d.z
+      );
+
+      // ====== 카메라 거리 계산 (세로/가로 FOV 모두 고려) ======
+      const radius = EARTH_RENDER_SIZE;
+      const aspect = viewport.aspect || (camera as any).aspect || 1;
+      const fovDeg = (camera as any).fov ?? 55;
+
+      const minDistance = distanceToFitSphere({
+        radius,
+        fovDeg,
+        aspect,
+        fitRatio: 0.6, // 구가 화면의 60% 정도 차지
+        padding: 1.15, // 살짝 여유
+      });
+
+      // ====== 카메라 접근 방향: 현재 카메라 위치 기준으로 행성을 바라보는 방향 유지 ======
+      const camPos = new Vector3().copy(camera.position);
+      // 카메라에서 행성을 향하는 방향
+      const toPlanet = new Vector3().subVectors(planetPos, camPos);
+
+      if (toPlanet.length() < 1e-4) {
+        // 거의 같은 지점이면 임의의 안정적 방향에서 행성 관찰
+        toPlanet.set(1, 0.25, 1);
+      }
+      toPlanet.normalize();
+
+      // 카메라를 행성 뒤쪽(행성에서 toPlanet의 반대방향)에 배치
+      const dir = toPlanet.clone().negate(); // 행성에서 카메라 방향 (행성->카메라)
+
+      // 목표 카메라 위치 = 행성 중심 + (행성에서 카메라 방향) * (필요 최소 거리)
+      const targetCamPos = new Vector3()
+        .copy(planetPos)
+        .addScaledVector(dir, minDistance);
+
+      // 디버그 로그
+      console.log(
+        "Flying to exoplanet:",
+        planetId,
+        "planet position:",
+        planetPos.toArray(),
+        "camera position:",
+        targetCamPos.toArray(),
+        "required distance:",
+        minDistance.toFixed(2)
+      );
+
+      // ====== 이동 지시 ======
+      if (mode === "player") {
+        const {
+          setRocketCameraMode,
+          setRocketCameraTarget,
+          setIsCameraMoving,
+        } = useStore.getState();
+        setRocketCameraMode("planet_view");
+        setRocketCameraTarget(exoId);
+        setIsCameraMoving(true);
+        setFlyToTarget(targetCamPos.toArray() as [number, number, number]);
+      } else {
+        const { setIsCameraMoving } = useStore.getState();
+        setIsCameraMoving(true);
+        setFlyToTarget(targetCamPos.toArray() as [number, number, number]);
+      }
     }
   };
 
@@ -169,58 +200,88 @@ export default function ExoplanetPointsAPI() {
     );
   }
 
-  if (planets.length === 0) {
-    return null;
-  }
+  if (planets.length === 0) return null;
 
   return (
     <group>
-      {/* 개별 행성 메시 (클릭 가능) */}
       {planets.map((planet) => {
-        // disposition에 따른 색상 결정
-        let color = "#ff0000"; // 기본 빨간색
-        if (planet.disposition === "CONFIRMED") {
-          color = "#00ff00"; // 녹색
-        } else if (planet.disposition === "CANDIDATE") {
-          color = "#ffff00"; // 노란색
-        } else if (planet.disposition === "FALSE POSITIVE") {
-          color = "#ff0000"; // 빨간색
-        }
+        let color = "#ff0000";
+        if (planet.disposition === "CONFIRMED") color = "#00ff00";
+        else if (planet.disposition === "CANDIDATE") color = "#ffff00";
+        else if (planet.disposition === "FALSE POSITIVE") color = "#ff0000";
 
-        // AI 확률에 따른 크기 (더 크게)
-        const size = Math.max(0.15, Math.min(planet.ai_probability * 0.5, 0.4));
+        const isSelected = selectedId === `exo-${planet.id}`;
+        const size = EARTH_RENDER_SIZE;
 
         return (
-          <mesh
-            key={planet.id}
-            position={[
-              planet.coordinates_3d.x,
-              planet.coordinates_3d.y,
-              planet.coordinates_3d.z,
-            ]}
-            onClick={(e) => {
-              e.stopPropagation();
-              handlePlanetClick(planet.id, planet);
-            }}
-            onPointerOver={(e) => {
-              e.stopPropagation();
-              document.body.style.cursor = "pointer";
-            }}
-            onPointerOut={() => {
-              document.body.style.cursor = "auto";
-            }}
-          >
-            <sphereGeometry args={[size, 16, 16]} />
-            <meshStandardMaterial
-              color={color}
-              emissive={color}
-              emissiveIntensity={0.3}
-              roughness={0.6}
-              metalness={0.2}
-              transparent
-              opacity={0.85}
-            />
-          </mesh>
+          <group key={planet.id}>
+            <mesh
+              position={[
+                planet.coordinates_3d.x,
+                planet.coordinates_3d.y,
+                planet.coordinates_3d.z,
+              ]}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePlanetClick(planet.id, planet);
+              }}
+              onPointerOver={(e) => {
+                e.stopPropagation();
+                document.body.style.cursor = "pointer";
+              }}
+              onPointerOut={() => {
+                document.body.style.cursor = "auto";
+              }}
+            >
+              <sphereGeometry args={[size, 16, 16]} />
+              <meshStandardMaterial
+                color={color}
+                emissive={color}
+                emissiveIntensity={isSelected ? 0.8 : 0.3}
+                roughness={0.6}
+                metalness={0.2}
+                transparent
+                opacity={isSelected ? 1.0 : 0.85}
+              />
+            </mesh>
+
+            {isSelected && (
+              <mesh
+                position={[
+                  planet.coordinates_3d.x,
+                  planet.coordinates_3d.y,
+                  planet.coordinates_3d.z,
+                ]}
+              >
+                <sphereGeometry args={[size * 1.5, 16, 16]} />
+                <meshBasicMaterial
+                  color={color}
+                  transparent
+                  opacity={0.2}
+                  side={2}
+                />
+              </mesh>
+            )}
+
+            {isSelected && (
+              <mesh
+                position={[
+                  planet.coordinates_3d.x,
+                  planet.coordinates_3d.y,
+                  planet.coordinates_3d.z,
+                ]}
+                rotation={[Math.PI / 2, 0, 0]}
+              >
+                <ringGeometry args={[size * 2, size * 2.5, 32]} />
+                <meshBasicMaterial
+                  color={color}
+                  transparent
+                  opacity={0.6}
+                  side={2}
+                />
+              </mesh>
+            )}
+          </group>
         );
       })}
     </group>

@@ -151,7 +151,8 @@ function CameraRig() {
     const [tx, ty, tz] = flyToTarget;
 
     // 카메라 이동 (부드러운 이동을 위해 속도 조정)
-    const moveSpeed = 0.05; // 0.08에서 0.05로 감소
+    const isExoplanet = selectedId && selectedId.startsWith("exo-");
+    const moveSpeed = isExoplanet ? 0.08 : 0.05; // 외계행성은 더 빠르게
     cur.x += (tx - cur.x) * moveSpeed;
     cur.y += (ty - cur.y) * moveSpeed;
     cur.z += (tz - cur.z) * moveSpeed;
@@ -183,10 +184,9 @@ function CameraRig() {
 
       orbitControls.update();
 
-      // 도착 확인 (외계행성은 더 큰 임계값 사용)
+      // 도착 확인 (외계행성과 태양계 행성 동일한 임계값 사용)
       const distance = Math.hypot(cur.x - tx, cur.y - ty, cur.z - tz);
-      const isExoplanet = selectedId && selectedId.startsWith("exo-");
-      const threshold = isExoplanet ? 2.0 : 0.2; // 외계행성은 2.0, 태양계 행성은 0.2
+      const threshold = 0.2; // 모든 행성 동일한 임계값
 
       if (distance < threshold) {
         camera.position.set(tx, ty, tz);
@@ -238,9 +238,14 @@ export default function Scene() {
   // 키보드 입력 처리
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // ESC 키로 카메라 고정 해제 (선택은 유지)
+      // ESC 키로 카메라 고정 해제 및 선택 해제
       if (e.key === "Escape") {
         setFlyToTarget(undefined);
+        setSelectedId(undefined);
+        setShowPlanetCard(false);
+        setSelectedPlanetData(null);
+        const { setIsCameraMoving } = useStore.getState();
+        setIsCameraMoving(false);
         return;
       }
 
@@ -358,15 +363,15 @@ export default function Scene() {
         </div>
       </div>
 
-      {/* ESC 키 안내 - 카메라가 고정되었을 때만 표시 */}
-      {flyToTarget && (
+      {/* ESC 키 안내 - 카메라가 고정되었을 때 또는 행성이 선택되었을 때 표시 */}
+      {(flyToTarget || selectedId) && (
         <div className="pointer-events-none absolute bottom-3 right-3 z-40">
           <div className="pointer-events-auto bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 backdrop-blur-sm text-white text-xs sm:text-sm text-center">
             Press{" "}
             <kbd className="px-1.5 py-0.5 bg-white/20 rounded border border-white/30 font-mono text-[10px] sm:text-xs">
               ESC
             </kbd>{" "}
-            to release camera
+            to {flyToTarget ? "release camera and " : ""}deselect planet
           </div>
         </div>
       )}
@@ -462,10 +467,19 @@ export default function Scene() {
         <CameraRig />
       </Canvas>
 
-      {/* PlanetCard - 외계행성 클릭 시 표시 */}
-      {showPlanetCard && selectedPlanet && (
+      {/* PlanetCard - 행성 선택 시 표시 */}
+      {showPlanetCard && selectedId && (selectedPlanet || selectedPlanetData) && (
         <PlanetCard
-          planet={selectedPlanet}
+          planet={
+            selectedPlanet || {
+              id: selectedId,
+              name: selectedPlanetData?.kepler_name || selectedId,
+              ra: selectedPlanetData?.ra,
+              dec: selectedPlanetData?.dec,
+              teq: selectedPlanetData?.teq,
+              score: selectedPlanetData?.score,
+            }
+          }
           planetData={selectedPlanetData}
           onClose={() => {
             setShowPlanetCard(false);

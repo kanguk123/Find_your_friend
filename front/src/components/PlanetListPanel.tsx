@@ -25,6 +25,8 @@ export default function PlanetListPanel() {
     favorites,
     setPlanets: setStorePlanets,
     bodyPositions,
+    setShowPlanetCard,
+    setSelectedPlanetData,
   } = useStore();
 
   // 태양계 행성과 외계행성 데이터 로드
@@ -127,6 +129,36 @@ export default function PlanetListPanel() {
     if (currentSelectedId !== planet.id) {
       console.log("PlanetList - First click: selecting planet only");
       clickHandler.handleClick(planet);
+
+      // PlanetCard 표시
+      setShowPlanetCard(true);
+      // 외계행성인 경우 selectedPlanetData 설정
+      if (!isSolarSystem) {
+        // planet 객체를 PlanetData 형식으로 변환
+        const planetData = {
+          id: parseInt(planet.id.replace("exo-", "")),
+          rowid: parseInt(planet.id.replace("exo-", "")),
+          kepler_name: planet.name,
+          ra: planet.ra || 0,
+          dec: planet.dec || 0,
+          teq: planet.teq,
+          disposition: (planet as any).disposition || "UNKNOWN",
+          score: planet.score || 0,
+          r: planet.features?.radius || 0,
+          m: planet.features?.mass || 0,
+          per: planet.features?.orbital_period || 0,
+          flux: planet.features?.stellar_flux || 0,
+          coordinates_3d: {
+            x: 0,
+            y: 0,
+            z: 0,
+          },
+        };
+        setSelectedPlanetData(planetData);
+      } else {
+        setSelectedPlanetData(null);
+      }
+
       return; // 첫 번째 클릭에서는 카메라 이동 없이 종료
     }
 
