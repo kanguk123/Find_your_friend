@@ -243,8 +243,14 @@ function CameraRig() {
 
 export default function Scene() {
   const [autoRotate, setAutoRotate] = useState(true);
-  const { mode, selectedId, setSelectedId, planets, setFlyToTarget } =
-    useStore();
+  const {
+    mode,
+    selectedId,
+    setSelectedId,
+    planets,
+    setFlyToTarget,
+    flyToTarget,
+  } = useStore();
   const selectedPlanet = planets.find((p) => p.id === selectedId);
   // 외계행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
   const isExoplanet =
@@ -255,10 +261,9 @@ export default function Scene() {
   // 키보드 입력 처리
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // ESC 키로 선택 해제
+      // ESC 키로 카메라 고정 해제 (선택은 유지)
       if (e.key === "Escape") {
         setFlyToTarget(undefined);
-        setSelectedId(undefined);
         return;
       }
 
@@ -361,8 +366,8 @@ export default function Scene() {
         <div className="pointer-events-auto bg-black/60 border border-white/15 rounded-xl p-3 backdrop-blur-sm">
           <InfoPanel />
         </div>
-        {/* ESC 키 안내 - 행성이 선택되었을 때만 표시 */}
-        {selectedId && (
+        {/* ESC 키 안내 - 카메라가 고정되었을 때만 표시 */}
+        {flyToTarget && (
           <div className="pointer-events-none bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 backdrop-blur-sm text-white text-xs sm:text-sm text-center">
             Press{" "}
             <kbd className="px-1.5 py-0.5 bg-white/20 rounded border border-white/30 font-mono text-[10px] sm:text-xs">
