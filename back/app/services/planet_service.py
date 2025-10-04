@@ -23,7 +23,7 @@ class PlanetService:
         limit: int = 100
     ) -> Tuple[List[Planet], int]:
         """
-        Get all planets with pagination
+        Get all planets with pagination, sorted by distance (r value)
 
         Args:
             db: Database session
@@ -33,7 +33,7 @@ class PlanetService:
         Returns:
             Tuple of (list of planets, total count)
         """
-        query = db.query(Planet)
+        query = db.query(Planet).order_by(Planet.r.asc())  # Sort by distance ascending
         total = query.count()
         planets = query.offset(skip).limit(limit).all()
         return planets, total
