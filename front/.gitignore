@@ -20,3 +20,5 @@ dist/
 
 # Three.js
 three.js/
+
+.front/public/models

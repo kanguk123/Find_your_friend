@@ -204,11 +204,8 @@ export default function Rocket() {
 
     const rollIn = (key.down("KeyQ") ? -1 : 0) + (key.down("KeyE") ? 1 : 0);
     if (rollIn !== 0) {
-      euler.z += ROLL_RATE * dt;
+      euler.z += rollIn * ROLL_RATE * dt;
       anyInput = true;
-    } else {
-      const targetBank = yawIn * BANK_GAIN;
-      euler.z += (targetBank - euler.z) * BANK_RETURN * dt;
     }
 
     const LIM = Math.PI / 2 - 0.01;

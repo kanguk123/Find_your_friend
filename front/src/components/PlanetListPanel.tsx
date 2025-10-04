@@ -470,6 +470,7 @@ export default function PlanetListPanel() {
           )}
         </div>
       )}
+
     </div>
   );
 }

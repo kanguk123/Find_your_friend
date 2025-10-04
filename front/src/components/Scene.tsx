@@ -8,18 +8,16 @@ import Link from "next/link";
 import SolarSystem from "./SolarSystem";
 import SolarSearchSidebar from "./SolarSearchSidebar";
 import ScoreSidebar from "./ScoreSidebar";
+import InfoPanel from "./InfoPanel";
 import Rocket from "./Rocket";
-import BlackHole from "./BlackHole";
 import GameHUD from "./GameHUD";
 import ModeSwitch from "./ModeSwitch";
 import FavoriteFilter from "./FavoriteFilter";
 import HyperparameterPanel from "./HyperparameterPanel";
 import ModelAccuracy from "./ModelAccuracy";
-import ExoplanetPointsAPI from "./ExoplanetPointsAPI";
+import ExoplanetPoints from "./ExoplanetPoints";
 import PlanetListPanel from "./PlanetListPanel";
-import PlanetCard from "./PlanetCard";
 import { useStore } from "@/state/useStore";
-import { ApiService, type PlanetData } from "@/services/api";
 
 // 키 입력 상태는 useStore에서 관리
 
@@ -28,7 +26,7 @@ function Skybox() {
 
   return (
     <mesh>
-      <sphereGeometry args={[6000, 60, 40]} />
+      <sphereGeometry args={[500, 60, 40]} />
       <meshBasicMaterial map={texture} side={BackSide} />
     </mesh>
   );
@@ -49,6 +47,23 @@ function CameraRig() {
     cameraPosition,
     setCameraPosition,
   } = useStore();
+
+  useEffect(() => {
+    if (controls) {
+      const onStart = () => {
+        // flyToTarget이 활성화된 상태에서 사용자가 카메라를 조작하면 fly-to를 중단합니다.
+        if (useStore.getState().flyToTarget) {
+          useStore.getState().setFlyToTarget(undefined);
+          useStore.getState().setIsCameraMoving(false);
+        }
+      };
+
+      controls.addEventListener("start", onStart);
+      return () => {
+        controls.removeEventListener("start", onStart);
+      };
+    }
+  }, [controls]);
 
   useFrame(() => {
     // 카메라 위치 직접 설정 (초기화)
@@ -151,8 +166,7 @@ function CameraRig() {
     const [tx, ty, tz] = flyToTarget;
 
     // 카메라 이동 (부드러운 이동을 위해 속도 조정)
-    const isExoplanet = selectedId && selectedId.startsWith("exo-");
-    const moveSpeed = isExoplanet ? 0.08 : 0.05; // 외계행성은 더 빠르게
+    const moveSpeed = 0.05; // 0.08에서 0.05로 감소
     cur.x += (tx - cur.x) * moveSpeed;
     cur.y += (ty - cur.y) * moveSpeed;
     cur.z += (tz - cur.z) * moveSpeed;
@@ -168,8 +182,8 @@ function CameraRig() {
       if (selectedId && bodyPositions[selectedId]) {
         const [px, py, pz] = bodyPositions[selectedId];
 
-        // 외계행성인지 확인 (exo-로 시작하면 외계행성)
-        const isExoplanet = selectedId.startsWith("exo-");
+        // 외계행성인지 확인 (planet-로 시작하면 외계행성)
+        const isExoplanet = selectedId.startsWith('planet-');
 
         if (isExoplanet) {
           // 외계행성: 행성을 바라봄
@@ -184,9 +198,9 @@ function CameraRig() {
 
       orbitControls.update();
 
-      // 도착 확인 (외계행성과 태양계 행성 동일한 임계값 사용)
+      // 도착 확인 (외계행성은 더 큰 임계값 사용)
       const distance = Math.hypot(cur.x - tx, cur.y - ty, cur.z - tz);
-      const threshold = 0.2; // 모든 행성 동일한 임계값
+      const threshold = selectedId && bodyPositions[selectedId] ? 2.0 : 0.2; // 외계행성은 2.0, 태양계 행성은 0.2
 
       if (distance < threshold) {
         camera.position.set(tx, ty, tz);
@@ -223,10 +237,7 @@ export default function Scene() {
     flyToTarget,
     bodyPositions,
     setKeysPressed,
-    showPlanetCard,
-    setShowPlanetCard,
-    selectedPlanetData,
-    setSelectedPlanetData,
+    bumpReset,
   } = useStore();
   const selectedPlanet = planets.find((p) => p.id === selectedId);
   // 외계행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
@@ -238,14 +249,9 @@ export default function Scene() {
   // 키보드 입력 처리
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // ESC 키로 카메라 고정 해제 및 선택 해제
+      // ESC 키로 카메라 고정 해제 (선택은 유지)
       if (e.key === "Escape") {
         setFlyToTarget(undefined);
-        setSelectedId(undefined);
-        setShowPlanetCard(false);
-        setSelectedPlanetData(null);
-        const { setIsCameraMoving } = useStore.getState();
-        setIsCameraMoving(false);
         return;
       }
 
@@ -343,6 +349,14 @@ export default function Scene() {
         <div className="pointer-events-auto relative z-30">
           <PlanetListPanel />
         </div>
+        <div className="pointer-events-auto relative z-30 mt-2">
+            <button
+                onClick={() => bumpReset()}
+                className="w-full px-3 py-2 text-sm rounded-lg bg-black/60 border border-white/15 hover:bg-white/10 whitespace-nowrap"
+            >
+                Reset to Earth
+            </button>
+        </div>
       </div>
 
       {/* 상단 중앙 UI */}
@@ -363,18 +377,22 @@ export default function Scene() {
         </div>
       </div>
 
-      {/* ESC 키 안내 - 카메라가 고정되었을 때 또는 행성이 선택되었을 때 표시 */}
-      {(flyToTarget || selectedId) && (
-        <div className="pointer-events-none absolute bottom-3 right-3 z-40">
-          <div className="pointer-events-auto bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 backdrop-blur-sm text-white text-xs sm:text-sm text-center">
+      {/* 우측 하단 - Planet 정보 (모든 모드에서 표시) */}
+      <div className="pointer-events-none absolute bottom-3 right-3 z-40 space-y-3">
+        <div className="pointer-events-auto bg-black/60 border border-white/15 rounded-xl p-3 backdrop-blur-sm">
+          <InfoPanel />
+        </div>
+        {/* ESC 키 안내 - 카메라가 고정되었을 때만 표시 */}
+        {flyToTarget && (
+          <div className="pointer-events-none bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 backdrop-blur-sm text-white text-xs sm:text-sm text-center">
             Press{" "}
             <kbd className="px-1.5 py-0.5 bg-white/20 rounded border border-white/30 font-mono text-[10px] sm:text-xs">
               ESC
             </kbd>{" "}
-            to {flyToTarget ? "release camera and " : ""}deselect planet
+            to release camera
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Expert 모드 전용 패널들 - 우측 상단 */}
       {mode === "expert" && (
@@ -396,30 +414,32 @@ export default function Scene() {
         </>
       )}
 
-      {/* Data Training 버튼 - 하단 중앙 */}
-      <div className="pointer-events-none absolute bottom-3 left-1/2 transform -translate-x-1/2 z-50">
-        <div className="pointer-events-auto">
-          <Link
-            href="/training"
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold rounded-lg transition-all shadow-lg"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+      {/* Data Training 버튼 - 하단 중앙 (Expert 모드에서만 표시) */}
+      {mode === "expert" && (
+        <div className="pointer-events-none absolute bottom-3 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="pointer-events-auto">
+            <Link
+              href="/training"
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold rounded-lg transition-all shadow-lg"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-              />
-            </svg>
-            Data Training
-          </Link>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                />
+              </svg>
+              Data Training
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 3D */}
       <Canvas
@@ -456,37 +476,15 @@ export default function Scene() {
           <SolarSystem timeScale={autoRotate ? 60 : 0.0001} />
 
           {/* 외계행성 표시 - 태양계 바깥쪽 */}
-          <ExoplanetPointsAPI />
+          <ExoplanetPoints radius={30} />
 
           {/* 로켓은 Player 모드에서만 표시 */}
           {mode === "player" && <Rocket />}
-          <BlackHole pos={[6, 0, 0]} />
         </Suspense>
 
         {/* 행성 보기(flyTo) 전용 리그 (Player 모드에서만 작동) */}
         <CameraRig />
       </Canvas>
-
-      {/* PlanetCard - 행성 선택 시 표시 */}
-      {showPlanetCard && selectedId && (selectedPlanet || selectedPlanetData) && (
-        <PlanetCard
-          planet={
-            selectedPlanet || {
-              id: selectedId,
-              name: selectedPlanetData?.kepler_name || selectedId,
-              ra: selectedPlanetData?.ra,
-              dec: selectedPlanetData?.dec,
-              teq: selectedPlanetData?.teq,
-              score: selectedPlanetData?.score,
-            }
-          }
-          planetData={selectedPlanetData}
-          onClose={() => {
-            setShowPlanetCard(false);
-            setSelectedPlanetData(null);
-          }}
-        />
-      )}
     </div>
   );
 }
