@@ -1,0 +1,5 @@
+[
+  { "id": "Kepler-186f", "name": "Kepler-186f", "ra": 297.643, "dec": 43.957, "teq": 188, "score": 0.72 },
+  { "id": "TRAPPIST-1e", "name": "TRAPPIST-1e", "ra": 346.625, "dec": -5.041, "teq": 251, "score": 0.81 },
+  { "id": "K2-18b",      "name": "K2-18b",      "ra": 172.0,   "dec": 7.6,    "teq": 285, "score": 0.41 }
+]
