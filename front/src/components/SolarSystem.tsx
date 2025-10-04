@@ -120,11 +120,31 @@ function SunCore() {
     <group
       onClick={(e) => {
         e.stopPropagation();
-        // 같은 태양을 다시 클릭하면 카메라 이동하지 않음
-        const currentSelectedId = useStore.getState().selectedId;
-        if (currentSelectedId === SUN.id) return;
 
-        setSelectedId(SUN.id);
+        const clickHandler = new SolarPlanetClickHandler();
+        const planet = {
+          id: SUN.id,
+          name: SUN.name,
+          score: SUN.score,
+          features: {
+            mass: SUN.radius * 10,
+            radius: SUN.radius,
+            orbital_period: undefined,
+            stellar_flux: 1.0,
+          },
+        };
+
+        const currentSelectedId = useStore.getState().selectedId;
+        if (currentSelectedId !== planet.id) {
+          clickHandler.handleClick(planet);
+          return;
+        }
+
+        if (useStore.getState().isCameraMoving) {
+          return;
+        }
+
+        useStore.getState().setIsCameraMoving(true);
         // 태양은 중심에 있으므로 적당한 거리에서 보기
         setFlyToTarget([0, 0, 4]);
         setFollowRocket(false);

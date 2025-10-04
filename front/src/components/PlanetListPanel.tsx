@@ -118,12 +118,6 @@ export default function PlanetListPanel() {
 
     // 태양계 행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
     if (planet.ra === undefined || planet.dec === undefined) {
-      // 태양의 경우 특별 처리 - SolarSystem.tsx와 동일한 로직
-      if (planet.id === "sun") {
-        clickHandler.moveCamera(planet);
-        return;
-      }
-
       // 다른 태양계 행성의 경우 - SolarSystem.tsx와 동일한 로직 사용
       const solarPlanet = PLANETS.find((p) => p.id === planet.id) || SUN;
       const orbitRadius = solarPlanet.orbitRadius || 0;
