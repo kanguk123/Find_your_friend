@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { Vector3, TextureLoader, BackSide } from "three";
+import { Vector3, TextureLoader, BackSide, DirectionalLight } from "three";
 import Link from "next/link";
 import SolarSystem from "./SolarSystem";
 import SolarSearchSidebar from "./SolarSearchSidebar";
@@ -39,27 +39,28 @@ function Skybox() {
 
 function CameraLight() {
   const { camera } = useThree();
-  const lightRef = useRef<any>();
+  const lightRef = useRef<DirectionalLight>(null);
 
-  useFrame(() => {
+  useFrame((state, delta) => {
     if (lightRef.current) {
       // 조명을 카메라 위치에 배치
       lightRef.current.position.copy(camera.position);
     }
   });
 
-  return (
-    <directionalLight
-      ref={lightRef}
-      intensity={1.5}
-      color="#ffffff"
-    />
-  );
+  return <directionalLight ref={lightRef} intensity={1.5} color="#ffffff" />;
 }
 
 function CameraRig() {
   const { camera, controls } = useThree();
-  const { flyToTarget, setFlyToTarget, followRocket, mode, selectedId, bodyPositions } = useStore();
+  const {
+    flyToTarget,
+    setFlyToTarget,
+    followRocket,
+    mode,
+    selectedId,
+    bodyPositions,
+  } = useStore();
 
   useFrame((state, delta) => {
     // Expert 모드에서 WASD 키보드로 카메라 시점 회전
@@ -76,13 +77,13 @@ function CameraRig() {
       let shouldUpdate = false;
 
       // W/S: 상하 회전 (pitch)
-      if (keysPressed['w'] || keysPressed['arrowup']) {
+      if (keysPressed["w"] || keysPressed["arrowup"]) {
         const up = new Vector3(0, 1, 0);
         const right = new Vector3().crossVectors(direction, up).normalize();
         direction.applyAxisAngle(right, rotateSpeed);
         shouldUpdate = true;
       }
-      if (keysPressed['s'] || keysPressed['arrowdown']) {
+      if (keysPressed["s"] || keysPressed["arrowdown"]) {
         const up = new Vector3(0, 1, 0);
         const right = new Vector3().crossVectors(direction, up).normalize();
         direction.applyAxisAngle(right, -rotateSpeed);
@@ -90,12 +91,12 @@ function CameraRig() {
       }
 
       // A/D: 좌우 회전 (yaw)
-      if (keysPressed['a'] || keysPressed['arrowleft']) {
+      if (keysPressed["a"] || keysPressed["arrowleft"]) {
         const up = new Vector3(0, 1, 0);
         direction.applyAxisAngle(up, rotateSpeed);
         shouldUpdate = true;
       }
-      if (keysPressed['d'] || keysPressed['arrowright']) {
+      if (keysPressed["d"] || keysPressed["arrowright"]) {
         const up = new Vector3(0, 1, 0);
         direction.applyAxisAngle(up, -rotateSpeed);
         shouldUpdate = true;
@@ -188,7 +189,18 @@ export default function Scene() {
 
       // 카메라 이동 키
       const key = e.key.toLowerCase();
-      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+      if (
+        [
+          "w",
+          "a",
+          "s",
+          "d",
+          "arrowup",
+          "arrowdown",
+          "arrowleft",
+          "arrowright",
+        ].includes(key)
+      ) {
         e.preventDefault();
         keysPressed[key] = true;
       }
@@ -196,7 +208,18 @@ export default function Scene() {
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
-      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+      if (
+        [
+          "w",
+          "a",
+          "s",
+          "d",
+          "arrowup",
+          "arrowdown",
+          "arrowleft",
+          "arrowright",
+        ].includes(key)
+      ) {
         keysPressed[key] = false;
       }
     };
@@ -223,10 +246,12 @@ export default function Scene() {
 
       {/* 좌측 상단 - Search planets & Favorites */}
       <div className="pointer-events-none absolute top-16 left-3 z-50 w-80 space-y-3">
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto relative z-50">
           <SolarSearchSidebar />
         </div>
-        <FavoriteFilter />
+        <div className="relative z-40">
+          <FavoriteFilter />
+        </div>
       </div>
 
       {/* 상단 중앙 UI */}
@@ -255,7 +280,11 @@ export default function Scene() {
         {/* ESC 키 안내 - 행성이 선택되었을 때만 표시 */}
         {selectedId && (
           <div className="pointer-events-none bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 backdrop-blur-sm text-white text-xs sm:text-sm text-center">
-            Press <kbd className="px-1.5 py-0.5 bg-white/20 rounded border border-white/30 font-mono text-[10px] sm:text-xs">ESC</kbd> to release camera
+            Press{" "}
+            <kbd className="px-1.5 py-0.5 bg-white/20 rounded border border-white/30 font-mono text-[10px] sm:text-xs">
+              ESC
+            </kbd>{" "}
+            to release camera
           </div>
         )}
       </div>
