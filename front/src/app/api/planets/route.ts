@@ -1,53 +1,38 @@
 import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 
-export interface ExternalPlanet {
-    id: string;
-    name: string;
-    position: [number, number, number]; // x, y, z
-    radius: number;
-    color: string;
-    orbitRadius?: number;
-    orbitSpeed?: number;
-}
+const BACKEND_URL = process.env.BACKEND_API_URL || 'http://127.0.0.1:8000';
 
-// Generate random planets for demonstration
-function generateRandomPlanets(count: number): ExternalPlanet[] {
-    const planets: ExternalPlanet[] = [];
-    const colors = ['#4a90e2', '#e24a4a', '#4ae24a', '#e2e24a', '#e24ae2', '#4ae2e2'];
-
-    for (let i = 0; i < count; i++) {
-        const angle = (Math.PI * 2 * i) / count;
-        const orbitRadius = 20 + Math.random() * 15; // 20-35 units from center
-        const x = Math.cos(angle) * orbitRadius;
-        const z = Math.sin(angle) * orbitRadius;
-
-        planets.push({
-            id: `external-planet-${i}`,
-            name: `Exoplanet ${String.fromCharCode(65 + i)}`,
-            position: [x, 0, z],
-            radius: 0.1 + Math.random() * 0.3, // 0.1-0.4
-            color: colors[Math.floor(Math.random() * colors.length)],
-            orbitRadius,
-            orbitSpeed: 0.0001 + Math.random() * 0.0002,
-        });
-    }
-
-    return planets;
-}
-
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
-        // Try to fetch from your actual server
-        // const response = await fetch('YOUR_SERVER_URL/planets');
-        // const data = await response.json();
-        // return NextResponse.json(data);
+        // Get query parameters
+        const searchParams = request.nextUrl.searchParams;
+        const page = searchParams.get('page') || '1';
+        const pageSize = searchParams.get('page_size') || '50';
 
-        // For now, return random planets
-        const planets = generateRandomPlanets(20);
-        return NextResponse.json({ planets });
+        // Proxy request to backend
+        const backendUrl = `${BACKEND_URL}/planets?page=${page}&page_size=${pageSize}`;
+        console.log('[Next.js API Route] Proxying to:', backendUrl);
+
+        const response = await fetch(backendUrl);
+
+        if (!response.ok) {
+            throw new Error(`Backend returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('[Next.js API Route] Successfully fetched data');
+
+        return NextResponse.json(data);
     } catch (error) {
-        // If server fails, return random planets
-        const planets = generateRandomPlanets(20);
-        return NextResponse.json({ planets });
+        console.error('[Next.js API Route] Error:', error);
+        return NextResponse.json(
+            {
+                success: false,
+                message: error instanceof Error ? error.message : 'Unknown error',
+                data: []
+            },
+            { status: 500 }
+        );
     }
 }

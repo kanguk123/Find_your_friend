@@ -2,7 +2,8 @@
  * API 서비스 - 백엔드와의 통신을 담당
  */
 
-const API_BASE_URL = "http://localhost:8000";
+// Use Next.js API routes as proxy to avoid CORS/network issues
+const API_BASE_URL = "/api";
 
 export interface PlanetData {
   id: number;
