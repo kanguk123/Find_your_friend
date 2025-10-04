@@ -320,7 +320,12 @@ export default function Rocket() {
         <group rotation={visualRotation}>
           <RocketModel scaleToMeters={0.2} rotation={[0, Math.PI / 6, 0]} />
           {/* Rocket flame - positioned at the back of the rocket */}
-          {visible && <RocketFlame intensity={flameIntensity.current} position={[0, -0.15, 0]} />}
+          {visible && (
+            <RocketFlame
+              intensity={flameIntensity.current}
+              position={[0, -0.15, 0]}
+            />
+          )}
         </group>
       </group>
     </>

@@ -191,6 +191,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       isCameraMoving,
       setIsCameraMoving,
       setBodyPositions,
+      mode,
     ]
   );
 
