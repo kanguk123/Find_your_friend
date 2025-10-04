@@ -51,6 +51,7 @@ export default function ExoplanetPointsAPI() {
     setShowPlanetCard,
     setSelectedPlanetData,
     threshold,
+    rocketPosition,
   } = useStore();
 
   // 카메라 거리 추적
@@ -119,7 +120,13 @@ export default function ExoplanetPointsAPI() {
       ],
     });
 
-    // 첫 클릭이든 재클릭이든 항상 카메라 이동
+    // Player 모드에서는 카메라 이동 없이 정보만 표시
+    if (mode === "player") {
+      console.log("Player 모드: 카메라 이동 없이 정보만 표시");
+      return;
+    }
+
+    // Expert 모드에서만 카메라 이동
     const { setIsCameraMoving } = useStore.getState();
     setIsCameraMoving(true);
 
@@ -130,37 +137,21 @@ export default function ExoplanetPointsAPI() {
       planet.coordinates_3d.z
     );
 
-    // ====== 카메라 거리 계산 (세로/가로 FOV 모두 고려) ======
-    const radius = EARTH_RENDER_SIZE * 4; // 실제 렌더링 크기와 동일
-    const aspect = viewport.aspect || (camera as any).aspect || 1;
-    const fovDeg = (camera as any).fov ?? 55;
+    // ====== 카메라 거리 계산 ======
+    // 원점(태양)으로부터 행성까지의 거리
+    const distanceFromOrigin = planetPos.length();
 
-    const minDistance = distanceToFitSphere({
-      radius,
-      fovDeg,
-      aspect,
-      fitRatio: 0.6, // 구가 화면의 60% 정도 차지
-      padding: 1.15, // 살짝 여유
-    });
+    // 카메라 거리: 원점에서 행성까지 거리의 최소 30% 이상
+    const minDistance = Math.max(distanceFromOrigin * 0.3, EARTH_RENDER_SIZE * 10);
 
-    // ====== 카메라 접근 방향: 현재 카메라 위치 기준으로 행성을 바라보는 방향 유지 ======
-    const camPos = new Vector3().copy(camera.position);
-    // 카메라에서 행성을 향하는 방향
-    const toPlanet = new Vector3().subVectors(planetPos, camPos);
+    // ====== 카메라 방향: 원점에서 행성을 향하는 방향 ======
+    const directionToPlaneт = planetPos.clone().normalize();
 
-    if (toPlanet.length() < 1e-4) {
-      // 거의 같은 지점이면 임의의 안정적 방향에서 행성 관찰
-      toPlanet.set(1, 0.25, 1);
-    }
-    toPlanet.normalize();
-
-    // 카메라를 행성 뒤쪽(행성에서 toPlanet의 반대방향)에 배치
-    const dir = toPlanet.clone().negate(); // 행성에서 카메라 방향 (행성->카메라)
-
-    // 목표 카메라 위치 = 행성 중심 + (행성에서 카메라 방향) * (필요 최소 거리)
+    // 목표 카메라 위치 = 행성 위치 + (원점->행성 방향) * 거리
+    // 이렇게 하면 원점-행성-카메라가 일직선상에 놓여 행성이 화면 중앙에 위치
     const targetCamPos = new Vector3()
       .copy(planetPos)
-      .addScaledVector(dir, minDistance);
+      .addScaledVector(directionToPlaneт, minDistance);
 
     // 디버그 로그
     console.log(
@@ -174,22 +165,9 @@ export default function ExoplanetPointsAPI() {
       minDistance.toFixed(2)
     );
 
-    // ====== 이동 지시 ======
-    if (mode === "player") {
-      const {
-        setRocketCameraMode,
-        setRocketCameraTarget,
-        setIsCameraMoving,
-      } = useStore.getState();
-      setRocketCameraMode("planet_view");
-      setRocketCameraTarget(exoId);
-      setIsCameraMoving(true);
-      setFlyToTarget(targetCamPos.toArray() as [number, number, number]);
-    } else {
-      const { setIsCameraMoving } = useStore.getState();
-      setIsCameraMoving(true);
-      setFlyToTarget(targetCamPos.toArray() as [number, number, number]);
-    }
+    // Expert 모드에서만 카메라 이동
+    setIsCameraMoving(true);
+    setFlyToTarget(targetCamPos.toArray() as [number, number, number]);
   };
 
   // 로딩 중이거나 에러가 있거나 데이터가 없으면 렌더링하지 않음
@@ -207,20 +185,32 @@ export default function ExoplanetPointsAPI() {
           return null;
         }
 
-        // 행성과 카메라 사이의 거리 계산
+        // 행성 위치
         const planetPos = new Vector3(
           planet.coordinates_3d.x,
           planet.coordinates_3d.y,
           planet.coordinates_3d.z
         );
-        const distanceToPlanet = camera.position.distanceTo(planetPos);
 
-        // 거리별 렌더링: 너무 가까우면 렌더링 안함 (카메라 거리 기준)
-        const minRenderDistance = cameraDistance * 0.1; // 카메라 거리의 10%
-        const maxRenderDistance = cameraDistance * 3; // 카메라 거리의 300%
+        // 거리별 렌더링
+        if (mode === "player") {
+          // Player 모드: 로켓 중심으로 일정 거리 내 행성만 렌더링
+          const rocketPos = new Vector3(rocketPosition[0], rocketPosition[1], rocketPosition[2]);
+          const distanceFromRocket = rocketPos.distanceTo(planetPos);
+          const renderRadius = 50; // 로켓 주변 50 단위 내 행성만 표시
 
-        if (distanceToPlanet < minRenderDistance || distanceToPlanet > maxRenderDistance) {
-          return null;
+          if (distanceFromRocket > renderRadius) {
+            return null;
+          }
+        } else {
+          // Expert 모드: 카메라 거리 기준 렌더링
+          const distanceToPlanet = camera.position.distanceTo(planetPos);
+          const minRenderDistance = cameraDistance * 0.1;
+          const maxRenderDistance = cameraDistance * 3;
+
+          if (distanceToPlanet < minRenderDistance || distanceToPlanet > maxRenderDistance) {
+            return null;
+          }
         }
 
         // AI probability에 따른 히트맵 색상 (낮음: 노란색 -> 중간: 초록색 -> 높음: 빨간색)

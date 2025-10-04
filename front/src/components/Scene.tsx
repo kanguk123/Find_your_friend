@@ -68,7 +68,8 @@ function CameraRig() {
     }
 
     // Player 모드와 Expert 모드에서 카메라 제어
-    if ((mode === "player" || mode === "expert") && controls && !flyToTarget) {
+    // Expert 모드에서는 flyToTarget이 있어도 키보드 이동 허용
+    if ((mode === "player" || mode === "expert") && controls && (mode === "expert" || !flyToTarget)) {
       const orbitControls = controls as unknown as {
         target: Vector3;
         update: () => void;
@@ -85,56 +86,106 @@ function CameraRig() {
 
       // 키보드 입력에 따른 카메라/타겟 이동 플래그
       let isMovingWithKeys = false;
+      const moveSpeed = 0.5; // 이동 속도
 
-      // W/S: 앞뒤 이동 (Panning)
-      if (keysPressed["w"] || keysPressed["arrowup"]) {
-        const direction = new Vector3()
-          .subVectors(target, cameraPos)
-          .normalize()
-          .multiplyScalar(0.05);
-        camera.position.add(direction);
-        target.add(direction);
-        isMovingWithKeys = true;
-      }
-      if (keysPressed["s"] || keysPressed["arrowdown"]) {
-        const direction = new Vector3()
-          .subVectors(target, cameraPos)
-          .normalize()
-          .multiplyScalar(-0.05);
-        camera.position.add(direction);
-        target.add(direction);
-        isMovingWithKeys = true;
+      if (mode === "expert") {
+        // Expert 모드에서 선택된 행성이 있을 때
+        if (selectedId && bodyPositions[selectedId]) {
+          // 행성을 중심으로 회전하도록 target 고정
+          target.copy(centerPoint);
+
+          // WASD로 카메라만 이동 (행성 중심 유지)
+          if (keysPressed["w"] || keysPressed["arrowup"]) {
+            camera.position.z += moveSpeed;
+            isMovingWithKeys = true;
+          }
+          if (keysPressed["s"] || keysPressed["arrowdown"]) {
+            camera.position.z -= moveSpeed;
+            isMovingWithKeys = true;
+          }
+          if (keysPressed["a"] || keysPressed["arrowleft"]) {
+            camera.position.x -= moveSpeed;
+            isMovingWithKeys = true;
+          }
+          if (keysPressed["d"] || keysPressed["arrowright"]) {
+            camera.position.x += moveSpeed;
+            isMovingWithKeys = true;
+          }
+        } else {
+          // 선택된 행성이 없으면 태양 중심으로
+          target.set(0, 0, 0);
+
+          // X, Z축 절대 이동 (카메라와 타겟 함께 이동)
+          if (keysPressed["w"] || keysPressed["arrowup"]) {
+            camera.position.z += moveSpeed;
+            target.z += moveSpeed;
+            isMovingWithKeys = true;
+          }
+          if (keysPressed["s"] || keysPressed["arrowdown"]) {
+            camera.position.z -= moveSpeed;
+            target.z -= moveSpeed;
+            isMovingWithKeys = true;
+          }
+          if (keysPressed["a"] || keysPressed["arrowleft"]) {
+            camera.position.x -= moveSpeed;
+            target.x -= moveSpeed;
+            isMovingWithKeys = true;
+          }
+          if (keysPressed["d"] || keysPressed["arrowright"]) {
+            camera.position.x += moveSpeed;
+            target.x += moveSpeed;
+            isMovingWithKeys = true;
+          }
+        }
+      } else {
+        // Player 모드: 기존 상대 이동
+        // W/S: 앞뒤 이동 (Panning)
+        if (keysPressed["w"] || keysPressed["arrowup"]) {
+          const direction = new Vector3()
+            .subVectors(target, cameraPos)
+            .normalize()
+            .multiplyScalar(0.05);
+          camera.position.add(direction);
+          target.add(direction);
+          isMovingWithKeys = true;
+        }
+        if (keysPressed["s"] || keysPressed["arrowdown"]) {
+          const direction = new Vector3()
+            .subVectors(target, cameraPos)
+            .normalize()
+            .multiplyScalar(-0.05);
+          camera.position.add(direction);
+          target.add(direction);
+          isMovingWithKeys = true;
+        }
+
+        // A/D: 좌우 이동 (Panning)
+        if (keysPressed["a"] || keysPressed["arrowleft"]) {
+          const direction = new Vector3().subVectors(target, cameraPos);
+          const up = new Vector3(0, 1, 0);
+          const right = new Vector3()
+            .crossVectors(direction, up)
+            .normalize()
+            .multiplyScalar(0.05);
+          camera.position.add(right);
+          target.add(right);
+          isMovingWithKeys = true;
+        }
+        if (keysPressed["d"] || keysPressed["arrowright"]) {
+          const direction = new Vector3().subVectors(target, cameraPos);
+          const up = new Vector3(0, 1, 0);
+          const right = new Vector3()
+            .crossVectors(direction, up)
+            .normalize()
+            .multiplyScalar(-0.05);
+          camera.position.add(right);
+          target.add(right);
+          isMovingWithKeys = true;
+        }
       }
 
-      // A/D: 좌우 이동 (Panning)
-      if (keysPressed["a"] || keysPressed["arrowleft"]) {
-        const direction = new Vector3().subVectors(target, cameraPos);
-        const up = new Vector3(0, 1, 0);
-        const right = new Vector3()
-          .crossVectors(direction, up)
-          .normalize()
-          .multiplyScalar(0.05);
-        camera.position.add(right);
-        target.add(right);
-        isMovingWithKeys = true;
-      }
-      if (keysPressed["d"] || keysPressed["arrowright"]) {
-        const direction = new Vector3().subVectors(target, cameraPos);
-        const up = new Vector3(0, 1, 0);
-        const right = new Vector3()
-          .crossVectors(direction, up)
-          .normalize()
-          .multiplyScalar(-0.05);
-        camera.position.add(right);
-        target.add(right);
-        isMovingWithKeys = true;
-      }
-
-      // 키보드 입력이 없을 때, 선택된 행성이 있다면 타겟을 행성에 고정
-      // 이렇게 해야 마우스 드래그 후에도 카메라가 제자리를 유지합니다.
-      if (!isMovingWithKeys && selectedId) {
-        target.copy(centerPoint);
-      }
+      // 키보드 이동 중이 아닐 때는 이미 위에서 설정한 target 유지
+      // (선택된 행성이 있으면 행성, 없으면 태양)
 
       // Damping을 사용하므로 항상 OrbitControls를 업데이트해야 합니다.
       orbitControls.update();
@@ -227,6 +278,7 @@ export default function Scene() {
     setShowPlanetCard,
     selectedPlanetData,
     setSelectedPlanetData,
+    isCameraMoving,
   } = useStore();
   const selectedPlanet = planets.find((p) => p.id === selectedId);
   // 외계행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
@@ -238,15 +290,26 @@ export default function Scene() {
   // 키보드 입력 처리
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // ESC 키로 카메라 고정 해제 및 선택 해제
+      // ESC 키로 카메라 고정 해제 및 선택 해제 (2단계)
       if (e.key === "Escape") {
-        setFlyToTarget(undefined);
-        setSelectedId(undefined);
-        setShowPlanetCard(false);
-        setSelectedPlanetData(null);
         const { setIsCameraMoving } = useStore.getState();
-        setIsCameraMoving(false);
-        return;
+
+        // 1단계: 카메라가 움직이고 있으면 먼저 카메라 해제
+        if (flyToTarget || isCameraMoving) {
+          setFlyToTarget(undefined);
+          setIsCameraMoving(false);
+          console.log("ESC 1단계: 카메라 해제", { flyToTarget, isCameraMoving });
+          return;
+        }
+
+        // 2단계: 카메라가 해제된 상태에서 선택 해제
+        if (selectedId) {
+          setSelectedId(undefined);
+          setShowPlanetCard(false);
+          setSelectedPlanetData(null);
+          console.log("ESC 2단계: 행성 선택 해제");
+          return;
+        }
       }
 
       // Player 모드에서 스페이스바 처리
@@ -315,7 +378,7 @@ export default function Scene() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [setFlyToTarget, setSelectedId, setKeysPressed]);
+  }, [setFlyToTarget, setSelectedId, setKeysPressed, flyToTarget, isCameraMoving, selectedId, mode, setShowPlanetCard, setSelectedPlanetData]);
 
   return (
     <div className="relative h-screen w-full">
@@ -364,14 +427,14 @@ export default function Scene() {
       </div>
 
       {/* ESC 키 안내 - 카메라가 고정되었을 때 또는 행성이 선택되었을 때 표시 */}
-      {(flyToTarget || selectedId) && (
-        <div className="pointer-events-none absolute bottom-3 right-3 z-40">
+      {(flyToTarget || isCameraMoving || selectedId) && (
+        <div className="pointer-events-none absolute bottom-3 left-3 z-40">
           <div className="pointer-events-auto bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 backdrop-blur-sm text-white text-xs sm:text-sm text-center">
             Press{" "}
             <kbd className="px-1.5 py-0.5 bg-white/20 rounded border border-white/30 font-mono text-[10px] sm:text-xs">
               ESC
             </kbd>{" "}
-            to {flyToTarget ? "release camera and " : ""}deselect planet
+            to {flyToTarget || isCameraMoving ? "release camera" : "deselect planet"}
           </div>
         </div>
       )}

@@ -5,12 +5,28 @@ import { useStore } from "@/state/useStore";
 import { PLANETS } from "@/data/solar";
 
 export default function ScoreSidebar() {
-    const { threshold, setThreshold } = useStore();
+    const { threshold, setThreshold, planets } = useStore();
 
     const count = useMemo(() => {
         const cut = threshold / 100;
-        return PLANETS.filter((p) => (p.score ?? 0) >= cut).length;
-    }, [threshold]);
+
+        // 태양계 행성 카운트
+        const solarCount = PLANETS.filter((p) => (p.score ?? 0) >= cut).length;
+
+        // 외계 행성 카운트
+        const exoCount = planets.filter((p) => {
+            // 외계 행성인지 확인 (ra, dec가 있으면 외계 행성)
+            const isExoplanet = p.ra !== undefined && p.dec !== undefined;
+            if (!isExoplanet) return false;
+            return (p.score ?? 0) >= cut;
+        }).length;
+
+        return solarCount + exoCount;
+    }, [threshold, planets]);
+
+    const totalCount = useMemo(() => {
+        return PLANETS.length + planets.filter(p => p.ra !== undefined && p.dec !== undefined).length;
+    }, [planets]);
 
     return (
         <div className="pointer-events-auto w-full lg:w-64 bg-black/55 border border-white/15 rounded-xl p-2 sm:p-3 text-white backdrop-blur-sm">
@@ -28,7 +44,7 @@ export default function ScoreSidebar() {
             />
 
             <div className="mt-2 text-xs opacity-80">
-                Visible planets: {count} / {PLANETS.length}
+                Visible planets: {count} / {totalCount}
             </div>
         </div>
     );
