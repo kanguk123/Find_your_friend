@@ -24,6 +24,14 @@ export interface PlanetData {
   };
 }
 
+export interface PlanetDetail extends PlanetData {
+  feature_correlations?: Array<{
+    feature1: string;
+    feature2: string;
+    correlation: number;
+  }>;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   message: string;
@@ -52,6 +60,13 @@ export class ApiService {
    */
   static async getPlanets(page: number = 1, pageSize: number = 50): Promise<ApiResponse<PlanetData[]>> {
     return this.request<ApiResponse<PlanetData[]>>(`/planets?page=${page}&page_size=${pageSize}`);
+  }
+
+  /**
+   * 특정 행성의 상세 정보를 가져옵니다
+   */
+  static async getPlanetDetail(planetId: number): Promise<ApiResponse<PlanetDetail>> {
+    return this.request<ApiResponse<PlanetDetail>>(`/planets/${planetId}`);
   }
 
   /**

@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useStore, type Planet } from "@/state/useStore";
-import { type PlanetData } from "@/services/api";
+import { type PlanetData, type PlanetDetail, ApiService } from "@/services/api";
 
 type Props = {
   planet: Planet;
@@ -12,9 +13,25 @@ type Props = {
 export default function PlanetCard({ planet, planetData, onClose }: Props) {
   const { mode, favorites, toggleFavorite } = useStore();
   const isFavorite = favorites.has(planet.id);
+  const [planetDetail, setPlanetDetail] = useState<PlanetDetail | null>(null);
 
   // 외계행성인지 확인 (exo-로 시작하면 외계행성)
   const isExoplanet = planet.id.startsWith("exo-");
+
+  // 외계행성 상세 정보 가져오기
+  useEffect(() => {
+    if (isExoplanet && planetData) {
+      ApiService.getPlanetDetail(planetData.id)
+        .then((response) => {
+          if (response.success) {
+            setPlanetDetail(response.data);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to load planet detail:", error);
+        });
+    }
+  }, [isExoplanet, planetData]);
 
   return (
     <div className="fixed bottom-3 right-3 z-50 pointer-events-auto">
@@ -123,81 +140,82 @@ export default function PlanetCard({ planet, planetData, onClose }: Props) {
           </div>
         )}
 
-        {/* Expert 모드: 상세 피처 정보 */}
-        {mode === "expert" && (
+        {/* Expert 모드: Feature Correlation */}
+        {mode === "expert" && isExoplanet && planetDetail?.feature_correlations && (
           <div className="mb-4 space-y-2">
             <h3 className="text-xs font-semibold text-white/80 uppercase tracking-wider">
-              {isExoplanet ? "Planet Details" : "Feature Correlation"}
+              Top 5 Feature Correlations
             </h3>
-            {isExoplanet && planetData ? (
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-white/5 rounded-lg p-2 border border-white/10">
-                  <div className="text-xs text-white/50 mb-1">Radius</div>
-                  <div className="text-sm font-semibold text-purple-400">
-                    {planetData.r ? planetData.r.toFixed(2) : "N/A"} R⊕
-                  </div>
-                </div>
-                <div className="bg-white/5 rounded-lg p-2 border border-white/10">
-                  <div className="text-xs text-white/50 mb-1">Mass</div>
-                  <div className="text-sm font-semibold text-purple-400">
-                    {planetData.m ? planetData.m.toFixed(2) : "N/A"} M⊕
-                  </div>
-                </div>
-                <div className="bg-white/5 rounded-lg p-2 border border-white/10">
-                  <div className="text-xs text-white/50 mb-1">Period</div>
-                  <div className="text-sm font-semibold text-purple-400">
-                    {planetData.per ? planetData.per.toFixed(2) : "N/A"} days
-                  </div>
-                </div>
-                <div className="bg-white/5 rounded-lg p-2 border border-white/10">
-                  <div className="text-xs text-white/50 mb-1">Flux</div>
-                  <div className="text-sm font-semibold text-purple-400">
-                    {planetData.flux ? planetData.flux.toFixed(2) : "N/A"}
-                  </div>
-                </div>
-              </div>
-            ) : planet.features ? (
-              <div className="grid grid-cols-2 gap-2">
-                {Object.entries(planet.features).map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="bg-white/5 rounded-lg p-2 border border-white/10"
-                  >
-                    <div className="text-xs text-white/50 mb-1 capitalize">
-                      {key.replace(/_/g, " ")}
+            <div className="space-y-1">
+              {planetDetail.feature_correlations.slice(0, 5).map((corr, index) => (
+                <div key={index} className="flex items-center justify-between text-xs">
+                  <span className="text-white/60 truncate max-w-[140px]" title={`${corr.feature1} - ${corr.feature2}`}>
+                    {corr.feature1.substring(0, 8)}...{corr.feature2.substring(0, 8)}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <div className="h-1.5 w-16 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${
+                          Math.abs(corr.correlation) > 0.7 ? 'bg-red-400' :
+                          Math.abs(corr.correlation) > 0.5 ? 'bg-orange-400' :
+                          Math.abs(corr.correlation) > 0.3 ? 'bg-yellow-400' :
+                          'bg-green-400'
+                        }`}
+                        style={{ width: `${Math.abs(corr.correlation) * 100}%` }}
+                      />
                     </div>
-                    <div className="text-sm font-semibold text-purple-400">
-                      {value !== undefined ? value.toFixed(2) : "N/A"}
-                    </div>
+                    <span className="text-white/80 w-10 text-right">
+                      {(corr.correlation * 100).toFixed(0)}%
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : null}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         {/* 좌표 정보 */}
-        <div className="mb-4 grid grid-cols-2 gap-3">
-          <div>
-            <div className="text-xs text-white/50 mb-1">Right Ascension</div>
-            <div className="text-xs font-mono text-white">
-              {isExoplanet && planetData
-                ? planetData.ra?.toFixed(2)
-                : planet.ra?.toFixed(2)}
-              °
+        <div className="mb-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-xs text-white/50 mb-1">Right Ascension</div>
+              <div className="text-xs font-mono text-white">
+                {isExoplanet && planetData
+                  ? planetData.ra?.toFixed(2)
+                  : planet.ra?.toFixed(2)}
+                °
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-white/50 mb-1">Declination</div>
+              <div className="text-xs font-mono text-white">
+                {isExoplanet && planetData
+                  ? planetData.dec?.toFixed(2)
+                  : planet.dec?.toFixed(2)}
+                °
+              </div>
             </div>
           </div>
-          <div>
-            <div className="text-xs text-white/50 mb-1">Declination</div>
-            <div className="text-xs font-mono text-white">
-              {isExoplanet && planetData
-                ? planetData.dec?.toFixed(2)
-                : planet.dec?.toFixed(2)}
-              °
+
+          {isExoplanet && planetData && (
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <div className="text-xs text-white/50 mb-1">Distance (R)</div>
+                <div className="text-xs font-mono text-white">
+                  {planetData.r?.toFixed(2)} pc
+                </div>
+              </div>
+              <div className="col-span-2">
+                <div className="text-xs text-white/50 mb-1">3D Coordinates</div>
+                <div className="text-xs font-mono text-white">
+                  ({planetData.coordinates_3d?.x.toFixed(1)}, {planetData.coordinates_3d?.y.toFixed(1)}, {planetData.coordinates_3d?.z.toFixed(1)})
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
           {(isExoplanet && planetData?.teq) || planet.teq ? (
-            <div className="col-span-2">
+            <div>
               <div className="text-xs text-white/50 mb-1">
                 Equilibrium Temperature
               </div>
