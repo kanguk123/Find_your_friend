@@ -68,4 +68,9 @@ export class ExoplanetClickHandler extends PlanetClickHandler {
     // 여기서는 기본적인 로직만 제공
     console.log("Moving camera to exoplanet:", planet.name);
   }
+
+  // 외계행성용 카메라 거리 계산 (작은 크기 고려)
+  getCameraDistance(baseRadius: number): number {
+    return baseRadius * 1.2; // 외계행성은 작으므로 더 멀리서 관찰
+  }
 }

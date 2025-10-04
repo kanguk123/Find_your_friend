@@ -91,8 +91,8 @@ export default function PlanetListPanel() {
 
   // 행성 클릭 핸들러
   const handlePlanetClick = (planet: Planet) => {
-    // 태양계 행성인지 확인 (ra, dec가 없으면 태양계 행성)
-    const isSolarSystem = !planet.ra || !planet.dec;
+    // 태양계 행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
+    const isSolarSystem = planet.ra === undefined || planet.dec === undefined;
     const clickHandler = isSolarSystem
       ? new SolarPlanetClickHandler()
       : new ExoplanetClickHandler();
@@ -112,8 +112,8 @@ export default function PlanetListPanel() {
 
     setIsCameraMoving(true);
 
-    // 태양계 행성인지 확인 (ra, dec가 없으면 태양계 행성)
-    if (!planet.ra || !planet.dec) {
+    // 태양계 행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
+    if (planet.ra === undefined || planet.dec === undefined) {
       // 태양의 경우 특별 처리 - SolarSystem.tsx와 동일한 로직
       if (planet.id === "sun") {
         clickHandler.moveCamera(planet);
@@ -170,7 +170,7 @@ export default function PlanetListPanel() {
 
       const len = Math.hypot(x, y, z) || 1;
       const n = [x / len, y / len, z / len];
-      const dist = radius * 0.5;
+      const dist = radius * 1.2; // 외계행성은 작으므로 더 멀리서 관찰
       setFlyToTarget([n[0] * dist, n[1] * dist, n[2] * dist]);
     }
 
@@ -229,7 +229,8 @@ export default function PlanetListPanel() {
           ) : (
             <div className="space-y-2">
               {filteredPlanets.map((planet) => {
-                const isSolarSystem = !planet.ra || !planet.dec;
+                const isSolarSystem =
+                  planet.ra === undefined || planet.dec === undefined;
                 const clickHandler = isSolarSystem
                   ? new SolarPlanetClickHandler()
                   : new ExoplanetClickHandler();

@@ -156,7 +156,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
         return;
       }
 
-      if (!p.ra || !p.dec) {
+      if (p.ra === undefined || p.dec === undefined) {
         console.log("Cannot fly to planet - missing ra/dec:", p);
         return;
       }
@@ -168,7 +168,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       const [x, y, z] = sph2cart(p.ra, p.dec, radius + SURFACE_OFFSET);
       const len = Math.hypot(x, y, z) || 1;
       const n: [number, number, number] = [x / len, y / len, z / len];
-      const dist = radius * 0.5; // 거리를 더 늘려서 행성을 더 잘 볼 수 있도록
+      const dist = radius * 1.2; // 외계행성은 작으므로 더 멀리서 관찰
       const targetPos: [number, number, number] = [
         n[0] * dist,
         n[1] * dist,
