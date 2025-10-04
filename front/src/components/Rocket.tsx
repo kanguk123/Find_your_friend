@@ -12,8 +12,8 @@ import { useStore } from "@/state/useStore";
 import { PLANETS } from "@/data/solar";
 import dynamic from "next/dynamic";
 
-// 🚀 SpaceX GLB 로더 (클라이언트 전용)
-const SpaceXRocket = dynamic(() => import("./SpaceXRocket"), { ssr: false });
+// 🚀 Rocket components (클라이언트 전용)
+const RocketModel = dynamic(() => import("./RocketModel"), { ssr: false });
 const RocketFlame = dynamic(() => import("./RocketFlame"), { ssr: false });
 
 /* ===== 공용 타입 유틸 ===== */
@@ -318,7 +318,7 @@ export default function Rocket() {
       <group ref={physRef} visible={visible}>
         <hemisphereLight intensity={0.12} />
         <group rotation={visualRotation}>
-          <SpaceXRocket scaleToMeters={0.2} rotation={[0, Math.PI / 6, 0]} />
+          <RocketModel scaleToMeters={0.2} rotation={[0, Math.PI / 6, 0]} />
           {/* Rocket flame - only when visible, controlled by intensity */}
           {visible && <RocketFlame intensity={flameIntensity.current} position={[0, 0, 0.12]} />}
         </group>

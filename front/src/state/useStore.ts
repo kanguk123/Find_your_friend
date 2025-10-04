@@ -101,6 +101,15 @@ type Store = {
   setShowPlanetCard: (show: boolean) => void;
   selectedPlanetData: any | null;
   setSelectedPlanetData: (data: any | null) => void;
+
+  // === Coin & Rocket Evolution System ===
+  coinCount: number;
+  rocketLevel: number;
+  collectCoin: () => void;
+  setRocketLevel: (level: number) => void;
+  floatingTexts: Array<{ id: string; text: string; position: Vec3; timestamp: number }>;
+  addFloatingText: (text: string, position: Vec3) => void;
+  removeFloatingText: (id: string) => void;
 };
 
 export const useStore = create<Store>((set) => ({
@@ -206,4 +215,38 @@ export const useStore = create<Store>((set) => ({
   setShowPlanetCard: (show) => set({ showPlanetCard: show }),
   selectedPlanetData: null,
   setSelectedPlanetData: (data) => set({ selectedPlanetData: data }),
+
+  // === Coin & Rocket Evolution System ===
+  coinCount: 0,
+  rocketLevel: 1,
+  collectCoin: () =>
+    set((state) => {
+      const newCoinCount = state.coinCount + 1;
+      console.log(`🪙 Coin collected! Total: ${newCoinCount}`);
+
+      // Auto-upgrade rocket at milestones
+      let newRocketLevel = state.rocketLevel;
+      if (newCoinCount === 3 && state.rocketLevel === 1) {
+        newRocketLevel = 2;
+        console.log(`🚀 Upgrading to level 2!`);
+      } else if (newCoinCount === 6 && state.rocketLevel === 2) {
+        newRocketLevel = 3;
+        console.log(`🚀 Upgrading to level 3!`);
+      }
+
+      return { coinCount: newCoinCount, rocketLevel: newRocketLevel };
+    }),
+  setRocketLevel: (level) => set({ rocketLevel: level }),
+  floatingTexts: [],
+  addFloatingText: (text, position) =>
+    set((state) => ({
+      floatingTexts: [
+        ...state.floatingTexts,
+        { id: `${Date.now()}-${Math.random()}`, text, position, timestamp: Date.now() },
+      ],
+    })),
+  removeFloatingText: (id) =>
+    set((state) => ({
+      floatingTexts: state.floatingTexts.filter((ft) => ft.id !== id),
+    })),
 }));

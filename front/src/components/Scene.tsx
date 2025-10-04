@@ -17,6 +17,7 @@ import HyperparameterPanel from "./HyperparameterPanel";
 import ModelAccuracy from "./ModelAccuracy";
 import ExoplanetPoints from "./ExoplanetPoints";
 import PlanetListPanel from "./PlanetListPanel";
+import { FloatingTextManager } from "./FloatingCoinText";
 import { useStore } from "@/state/useStore";
 
 // 키 입력 상태는 useStore에서 관리
@@ -559,7 +560,48 @@ export default function Scene() {
 
         {/* 행성 보기(flyTo) 전용 리그 (Player 모드에서만 작동) */}
         <CameraRig />
+
+        {/* Floating coin text animations */}
+        {mode === "player" && <FloatingTextManager />}
       </Canvas>
+
+      {/* Coin counter display - Player mode only */}
+      {mode === "player" && <CoinCounter />}
+    </div>
+  );
+}
+
+/**
+ * CoinCounter - Displays current coin count and rocket level
+ */
+function CoinCounter() {
+  const { coinCount, rocketLevel } = useStore();
+
+  return (
+    <div className="pointer-events-none absolute top-3 right-3 z-50">
+      <div className="pointer-events-auto bg-black/70 border border-yellow-500/50 rounded-xl p-4 backdrop-blur-sm">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-3xl">🪙</span>
+            <div>
+              <div className="text-yellow-400 text-2xl font-bold">{coinCount}</div>
+              <div className="text-white/60 text-xs">Coins</div>
+            </div>
+          </div>
+          <div className="h-8 w-px bg-white/20" />
+          <div className="flex items-center gap-2">
+            <span className="text-3xl">🚀</span>
+            <div>
+              <div className="text-blue-400 text-2xl font-bold">Level {rocketLevel}</div>
+              <div className="text-white/60 text-xs">
+                {rocketLevel === 1 && "Next: 3 coins"}
+                {rocketLevel === 2 && "Next: 6 coins"}
+                {rocketLevel === 3 && "Max level!"}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -52,6 +52,8 @@ export default function ExoplanetPointsAPI() {
     setSelectedPlanetData,
     threshold,
     rocketPosition,
+    collectCoin,
+    addFloatingText,
   } = useStore();
 
   // 카메라 거리 추적
@@ -109,6 +111,25 @@ export default function ExoplanetPointsAPI() {
     setSelectedId(exoId);
     setSelectedPlanetData(planet);
     setShowPlanetCard(true);
+
+    // 🪙 Coin collection logic - only in Player mode and if probability >= 0.9
+    if (mode === "player" && planet.ai_probability >= 0.9) {
+      collectCoin();
+
+      // Show floating "+1 Coin" text at planet position
+      addFloatingText(
+        "+1 Coin",
+        [
+          planet.coordinates_3d.x,
+          planet.coordinates_3d.y,
+          planet.coordinates_3d.z,
+        ]
+      );
+
+      console.log(`🪙 Coin collected from planet ${planet.id} (probability: ${planet.ai_probability.toFixed(2)})`);
+    } else if (mode === "player") {
+      console.log(`❌ Planet ${planet.id} probability too low (${planet.ai_probability.toFixed(2)} < 0.9)`);
+    }
 
     // bodyPositions 보강
     setBodyPositions({
