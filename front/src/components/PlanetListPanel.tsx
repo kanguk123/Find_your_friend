@@ -114,15 +114,18 @@ export default function PlanetListPanel() {
 
     // 태양계 행성인지 확인 (ra, dec가 없으면 태양계 행성)
     if (!planet.ra || !planet.dec) {
-      // 태양계 행성의 경우 - SolarSystem.tsx와 동일한 로직 사용
+      // 태양의 경우 특별 처리 - SolarSystem.tsx와 동일한 로직
+      if (planet.id === "sun") {
+        clickHandler.moveCamera(planet);
+        return;
+      }
+
+      // 다른 태양계 행성의 경우 - SolarSystem.tsx와 동일한 로직 사용
       const solarPlanet = PLANETS.find((p) => p.id === planet.id) || SUN;
       const orbitRadius = solarPlanet.orbitRadius || 0;
 
       // 행성 크기에 따라 카메라 거리 조정
-      const planetRadius =
-        solarPlanet.id === "sun"
-          ? solarPlanet.radius
-          : solarPlanet.radius * 0.62; // GLOBAL_PLANET_SCALE 적용
+      const planetRadius = solarPlanet.radius * 0.62; // GLOBAL_PLANET_SCALE 적용
       const cameraDistance = planetRadius * 4.5; // 더 멀리
 
       // 태양계 행성의 현재 위치 계산 (SolarSystem.tsx와 동일한 로직)
@@ -130,25 +133,17 @@ export default function PlanetListPanel() {
       const TAU = Math.PI * 2;
       const ORBIT_SCALE = 1; // SolarSystem에서 사용하는 ORBIT_SCALE
 
-      let x, y, z;
-      if (solarPlanet.periodDays) {
-        const now = Date.now();
-        const seconds = now / 1000;
-        const omega =
-          timeScale === 0
-            ? 0
-            : TAU / ((solarPlanet.periodDays * 86400) / timeScale);
-        const angle = omega * seconds;
-        const r = orbitRadius * ORBIT_SCALE;
-        x = r * Math.cos(angle);
-        y = 0;
-        z = r * Math.sin(angle);
-      } else {
-        // 태양의 경우 중심에 고정
-        x = 0;
-        y = 0;
-        z = 0;
-      }
+      const now = Date.now();
+      const seconds = now / 1000;
+      const omega =
+        timeScale === 0
+          ? 0
+          : TAU / ((solarPlanet.periodDays! * 86400) / timeScale);
+      const angle = omega * seconds;
+      const r = orbitRadius * ORBIT_SCALE;
+      const x = r * Math.cos(angle);
+      const y = 0;
+      const z = r * Math.sin(angle);
 
       // 태양(0, 0, 0)에서 행성으로 향하는 방향 벡터 (정규화)
       const dirX = x;

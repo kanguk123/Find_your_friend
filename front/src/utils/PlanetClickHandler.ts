@@ -48,7 +48,14 @@ export abstract class PlanetClickHandler {
 // 태양계 행성 클릭 핸들러
 export class SolarPlanetClickHandler extends PlanetClickHandler {
   protected moveCamera(planet: Planet): void {
-    // 태양계 행성의 카메라 이동 로직은 각 컴포넌트에서 구현
+    // 태양의 경우 특별 처리
+    if (planet.id === "sun") {
+      this.store.setFlyToTarget([0, 0, 4]);
+      this.store.setFollowRocket(false);
+      return;
+    }
+
+    // 다른 태양계 행성의 카메라 이동 로직은 각 컴포넌트에서 구현
     // 여기서는 기본적인 로직만 제공
     console.log("Moving camera to solar planet:", planet.name);
   }
