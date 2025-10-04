@@ -66,60 +66,77 @@ function CameraRig() {
       console.log("Camera position set to:", cameraPosition);
     }
 
-    // Player 모드와 Expert 모드에서 WASD 키보드로 카메라 이동
+    // Player 모드와 Expert 모드에서 카메라 제어
     if ((mode === "player" || mode === "expert") && controls && !flyToTarget) {
-      const moveSpeed = 0.05; // Expert 모드와 동일한 이동 속도
-      const target = (controls as unknown as { target: Vector3 }).target;
+      const orbitControls = controls as unknown as {
+        target: Vector3;
+        update: () => void;
+      };
+      const target = orbitControls.target;
       const cameraPos = camera.position;
 
-      // Player 모드와 Expert 모드 모두에서 선택된 행성을 중심으로 카메라 이동
-      let centerPoint = new Vector3(0, 0, 0); // 기본 중심점 (태양)
+      // 중심점 설정 (선택된 행성 또는 태양)
+      let centerPoint = new Vector3(0, 0, 0);
       if (selectedId && bodyPositions[selectedId]) {
         const [px, py, pz] = bodyPositions[selectedId];
         centerPoint.set(px, py, pz);
       }
 
-      // 카메라에서 중심점으로의 방향 벡터
-      const direction = new Vector3().subVectors(centerPoint, cameraPos);
+      // 키보드 입력에 따른 카메라/타겟 이동 플래그
+      let isMovingWithKeys = false;
 
-      let shouldUpdate = false;
-
-      // W/S: 앞뒤 이동
+      // W/S: 앞뒤 이동 (Panning)
       if (keysPressed["w"] || keysPressed["arrowup"]) {
-        direction.normalize().multiplyScalar(moveSpeed);
+        const direction = new Vector3()
+          .subVectors(target, cameraPos)
+          .normalize()
+          .multiplyScalar(0.05);
         camera.position.add(direction);
         target.add(direction);
-        shouldUpdate = true;
+        isMovingWithKeys = true;
       }
       if (keysPressed["s"] || keysPressed["arrowdown"]) {
-        direction.normalize().multiplyScalar(-moveSpeed);
+        const direction = new Vector3()
+          .subVectors(target, cameraPos)
+          .normalize()
+          .multiplyScalar(-0.05);
         camera.position.add(direction);
         target.add(direction);
-        shouldUpdate = true;
+        isMovingWithKeys = true;
       }
 
-      // A/D: 좌우 이동
+      // A/D: 좌우 이동 (Panning)
       if (keysPressed["a"] || keysPressed["arrowleft"]) {
+        const direction = new Vector3().subVectors(target, cameraPos);
         const up = new Vector3(0, 1, 0);
-        const right = new Vector3().crossVectors(direction, up).normalize();
-        right.multiplyScalar(moveSpeed);
+        const right = new Vector3()
+          .crossVectors(direction, up)
+          .normalize()
+          .multiplyScalar(0.05);
         camera.position.add(right);
         target.add(right);
-        shouldUpdate = true;
+        isMovingWithKeys = true;
       }
       if (keysPressed["d"] || keysPressed["arrowright"]) {
+        const direction = new Vector3().subVectors(target, cameraPos);
         const up = new Vector3(0, 1, 0);
-        const right = new Vector3().crossVectors(direction, up).normalize();
-        right.multiplyScalar(-moveSpeed);
+        const right = new Vector3()
+          .crossVectors(direction, up)
+          .normalize()
+          .multiplyScalar(-0.05);
         camera.position.add(right);
         target.add(right);
-        shouldUpdate = true;
+        isMovingWithKeys = true;
       }
 
-      // 키 입력이 있을 때만 컨트롤 업데이트
-      if (shouldUpdate) {
-        (controls as unknown as { update: () => void }).update();
+      // 키보드 입력이 없을 때, 선택된 행성이 있다면 타겟을 행성에 고정
+      // 이렇게 해야 마우스 드래그 후에도 카메라가 제자리를 유지합니다.
+      if (!isMovingWithKeys && selectedId) {
+        target.copy(centerPoint);
       }
+
+      // Damping을 사용하므로 항상 OrbitControls를 업데이트해야 합니다.
+      orbitControls.update();
     }
 
     // flyToTarget이 없으면 리턴
@@ -364,19 +381,9 @@ export default function Scene() {
         </div>
       )}
 
-      {/* Player 모드 - Expert 패널들 + 게임 HUD */}
+      {/* Player 모드 - 게임 HUD */}
       {mode === "player" && (
         <>
-          {/* Expert 패널들 - 우측 상단 */}
-          <div className="pointer-events-none absolute top-16 right-3 z-50 w-80 space-y-3 max-h-[calc(100vh-16rem)] overflow-y-auto">
-            <div className="pointer-events-auto">
-              <HyperparameterPanel />
-            </div>
-            <div className="pointer-events-auto">
-              <ModelAccuracy />
-            </div>
-          </div>
-
           {/* 게임 HUD - 좌하단 */}
           <GameHUD />
         </>
@@ -433,7 +440,7 @@ export default function Scene() {
           rotateSpeed={1.0}
           panSpeed={1.0}
           dampingFactor={0.02}
-          enableDamping={false}
+          enableDamping={true}
           autoRotate={false}
         />
 
