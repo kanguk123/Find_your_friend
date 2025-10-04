@@ -26,17 +26,29 @@ function PlanetMesh({ body, texUrl }: { body: Body; texUrl?: string }) {
     const textures = useSolarTextures();
     const tex = texUrl ? textures.get(texUrl) : undefined;
     const hasTex = !!tex;
+    const { selectedId } = useStore();
+
+    // 이 행성이 선택되었으면 렌더 순서를 높여서 태양 앞에 표시
+    const isSelected = selectedId === body.id;
+
+    // 다른 행성이 선택되었으면 이 행성을 반투명하게
+    const isOtherSelected = selectedId && selectedId !== body.id;
 
     return (
-        <mesh>
+        <mesh renderOrder={isSelected ? 1 : (isOtherSelected ? -1 : 0)}>
             <sphereGeometry args={[renderRadius(body), 64, 64]} />
             <meshStandardMaterial
                 map={tex}
-                color={hasTex ? "#ffffff" : body.color}
+                emissiveMap={isSelected && tex ? tex : undefined}
+                color={isOtherSelected ? "#666666" : (hasTex ? "#ffffff" : body.color)}
                 roughness={0.9}
                 metalness={0}
-                emissive={hasTex ? "#000000" : body.color}
-                emissiveIntensity={hasTex ? 0.0 : 0.08}
+                emissive={isOtherSelected ? "#000000" : (hasTex ? "#000000" : body.color)}
+                emissiveIntensity={isSelected ? 0.8 : (isOtherSelected ? 0.0 : (hasTex ? 0.0 : 0.08))}
+                depthTest={true}
+                depthWrite={!isOtherSelected}
+                transparent={!!isOtherSelected}
+                opacity={isOtherSelected ? 0.3 : 1.0}
             />
         </mesh>
     );
@@ -68,24 +80,45 @@ function SaturnRing({ body }: { body: Body }) {
 function SunCore() {
     const textures = useSolarTextures();
     const sunTex = SUN.texture ? textures.get(SUN.texture) : undefined;
+    const { setSelectedId, setFlyToTarget, setFollowRocket, selectedId } = useStore();
+
+    // 행성이 선택되었고, 태양이 아닌 경우 태양을 반투명하게
+    const isSunTransparent = !!(selectedId && selectedId !== SUN.id);
 
     return (
-        <group>
-            <mesh>
-                <sphereGeometry args={[renderRadius(SUN), 64, 64]} />
-                <meshBasicMaterial map={sunTex} color={sunTex ? "#ffffff" : SUN.color} toneMapped={false} />
-            </mesh>
+        <group
+            onClick={(e) => {
+                e.stopPropagation();
+                // 같은 태양을 다시 클릭하면 카메라 이동하지 않음
+                const currentSelectedId = useStore.getState().selectedId;
+                if (currentSelectedId === SUN.id) return;
 
-            {false && (
-                <sprite scale={[SUN.radius * 6, SUN.radius * 6, SUN.radius * 6]}>
-                    <spriteMaterial
-                        transparent
-                        depthWrite={false}
-                        blending={AdditiveBlending}
-                        opacity={0.85}
-                    />
-                </sprite>
-            )}
+                setSelectedId(SUN.id);
+                // 태양은 중심에 있으므로 적당한 거리에서 보기
+                setFlyToTarget([0, 0, 4]);
+                setFollowRocket(false);
+            }}
+            onPointerOver={(e) => {
+                e.stopPropagation();
+                document.body.style.cursor = "pointer";
+            }}
+            onPointerOut={(e) => {
+                e.stopPropagation();
+                document.body.style.cursor = "default";
+            }}
+        >
+            <mesh renderOrder={isSunTransparent ? -1 : 0}>
+                <sphereGeometry args={[renderRadius(SUN), 64, 64]} />
+                <meshBasicMaterial
+                    map={sunTex}
+                    color={sunTex ? "#ffffff" : SUN.color}
+                    toneMapped={false}
+                    transparent={true}
+                    opacity={isSunTransparent ? 0.25 : 1.0}
+                    depthWrite={!isSunTransparent}
+                    depthTest={true}
+                />
+            </mesh>
 
             <pointLight intensity={4} distance={3000} decay={2} />
         </group>
@@ -94,7 +127,7 @@ function SunCore() {
 
 export default function SolarSystem({ timeScale = 60 }: { timeScale?: number }) {
     const planetRefs = useRef<Record<string, Group>>({});
-    const { threshold, setSelectedId, setFlyToTarget, setBodyPositions } = useStore();
+    const { threshold, setSelectedId, setFlyToTarget, setBodyPositions, setFollowRocket } = useStore();
 
     const cut = threshold / 100;
 
@@ -121,6 +154,9 @@ export default function SolarSystem({ timeScale = 60 }: { timeScale?: number }) 
     useFrame(() => {
         const now = Date.now();
         const pos: Record<string, [number, number, number]> = {};
+
+        // 태양 위치 추가 (중심에 고정)
+        pos[SUN.id] = [0, 0, 0];
 
         for (const p of planets) {
             const g = planetRefs.current[p.id];
@@ -168,12 +204,35 @@ export default function SolarSystem({ timeScale = 60 }: { timeScale?: number }) 
                     visible={p.score === undefined ? true : p.score >= cut}
                     onClick={(e) => {
                         e.stopPropagation();
+                        // 같은 행성을 다시 클릭하면 카메라 이동하지 않음
+                        const currentSelectedId = useStore.getState().selectedId;
+                        if (currentSelectedId === p.id) return;
+
                         setSelectedId(p.id);
                         const g = planetRefs.current[p.id];
                         if (!g) return;
-                        const len = Math.hypot(g.position.x, g.position.y, g.position.z) || 1;
-                        const f = len * (1 + FLY_DISTANCE_FACTOR);
-                        setFlyToTarget([(g.position.x / len) * f, 0, (g.position.z / len) * f]);
+
+                        // 행성 크기에 따라 카메라 거리 조정
+                        const planetRadius = renderRadius(p);
+                        const cameraDistance = planetRadius * 4.5; // 더 멀리
+
+                        // 태양(0, 0, 0)에서 행성으로 향하는 방향 벡터 (정규화)
+                        const dirX = g.position.x;
+                        const dirZ = g.position.z;
+                        const len = Math.hypot(dirX, dirZ) || 1;
+                        const normalX = dirX / len;
+                        const normalZ = dirZ / len;
+
+                        // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
+                        // 행성의 밝은 면을 정면에서 봄
+                        const camX = g.position.x + normalX * cameraDistance;
+                        const camY = g.position.y + cameraDistance * 0.15; // 약간 위에서
+                        const camZ = g.position.z + normalZ * cameraDistance;
+
+                        setFlyToTarget([camX, camY, camZ]);
+
+                        // 로켓 추적 해제 (카메라가 행성으로 이동)
+                        setFollowRocket(false);
                     }}
                     onPointerOver={(e) => {
                         e.stopPropagation();

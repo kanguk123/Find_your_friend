@@ -27,24 +27,24 @@ export default function PlanetCard({ planet, onClose }: Props) {
     };
 
     return (
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-auto">
-            <div className="bg-black/90 border border-white/20 rounded-2xl p-6 backdrop-blur-lg shadow-2xl w-96">
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-auto px-4 max-w-full">
+            <div className="bg-black/90 border border-white/20 rounded-2xl p-4 sm:p-6 backdrop-blur-lg shadow-2xl w-full sm:w-96 max-h-[90vh] overflow-y-auto">
                 {/* 헤더 */}
-                <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                        <h2 className="text-2xl font-bold text-white mb-1">{planet.name}</h2>
-                        <p className="text-xs text-white/50 uppercase tracking-wider">
+                <div className="flex items-start justify-between mb-3 sm:mb-4">
+                    <div className="flex-1 min-w-0">
+                        <h2 className="text-lg sm:text-2xl font-bold text-white mb-1 truncate">{planet.name}</h2>
+                        <p className="text-[10px] sm:text-xs text-white/50 uppercase tracking-wider">
                             {mode === "expert" ? "Research Mode" : "Explorer Mode"}
                         </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                         <button
                             onClick={() => toggleFavorite(planet.id)}
-                            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                            className="p-1.5 sm:p-2 rounded-lg hover:bg-white/10 transition-colors"
                             title={isFavorite ? "Remove from favorites" : "Add to favorites"}
                         >
                             <svg
-                                className={`w-6 h-6 ${
+                                className={`w-5 h-5 sm:w-6 sm:h-6 ${
                                     isFavorite ? "fill-yellow-400 text-yellow-400" : "text-white/50"
                                 }`}
                                 fill={isFavorite ? "currentColor" : "none"}
@@ -61,9 +61,9 @@ export default function PlanetCard({ planet, onClose }: Props) {
                         </button>
                         <button
                             onClick={onClose}
-                            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                            className="p-1.5 sm:p-2 rounded-lg hover:bg-white/10 transition-colors"
                         >
-                            <svg className="w-6 h-6 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>

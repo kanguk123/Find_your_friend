@@ -107,7 +107,18 @@ export const useStore = create<Store>((set) => ({
 
     // === 카메라 fly-to ===
     flyToTarget: undefined,
-    setFlyToTarget: (v) => set({ flyToTarget: v }),
+    setFlyToTarget: (v) => {
+        // 같은 좌표로 이미 이동 중이면 무시
+        const current = useStore.getState().flyToTarget;
+        if (current && v) {
+            const [cx, cy, cz] = current;
+            const [vx, vy, vz] = v;
+            const distance = Math.hypot(cx - vx, cy - vy, cz - vz);
+            // 거리가 0.01 이내면 같은 위치로 간주
+            if (distance < 0.01) return;
+        }
+        set({ flyToTarget: v });
+    },
 
     // === 로켓 추적 여부 ===
     followRocket: true,

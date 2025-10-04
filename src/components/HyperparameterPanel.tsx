@@ -5,7 +5,7 @@ import { useStore } from "@/state/useStore";
 
 export default function HyperparameterPanel() {
     const { hyperparameters, setHyperparameters } = useStore();
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     return (
         <div className="bg-black/60 border border-white/15 rounded-xl backdrop-blur-sm overflow-hidden">
@@ -29,7 +29,7 @@ export default function HyperparameterPanel() {
 
             {/* Content */}
             {isExpanded && (
-                <div className="px-4 pb-4 space-y-4">
+                <div className="px-4 pb-4 space-y-4 max-h-96 overflow-y-auto">
                     {/* Learning Rate */}
                     <div>
                         <label className="flex justify-between text-xs text-white/70 mb-2">

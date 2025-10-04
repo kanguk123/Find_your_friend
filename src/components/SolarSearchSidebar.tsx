@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { useStore } from "@/state/useStore";
-import { SUN, PLANETS } from "@/data/solar";
+import { SUN, PLANETS, type Body } from "@/data/solar";
 
 type Item = { id: string; name: string };
 
@@ -34,16 +34,47 @@ export default function SolarSearchSidebar() {
     useEffect(() => { setActiveIdx(0); }, [q]);
 
     const flyTo = useCallback((id: string) => {
+        // 같은 행성을 다시 선택하면 카메라 이동하지 않음
+        const currentSelectedId = useStore.getState().selectedId;
+        if (currentSelectedId === id) {
+            setQ("");
+            setShowSuggestions(false);
+            return;
+        }
+
         setSelectedId(id);
         const pos = bodyPositions[id];
         if (!pos) return;
         const [x, y, z] = pos;
-        const len = Math.hypot(x, y, z) || 1;
-        const f = len * 1.35;
-        // 카메라를 천체 바깥 쪽으로 이동
-        setFlyToTarget([(x/len)*f, (y/len)*f, (z/len)*f]);
+
+        // 선택된 천체의 정보 가져오기
+        const allBodies = [SUN, ...PLANETS];
+        const body = allBodies.find(b => b.id === id);
+        if (!body) return;
+
+        // 행성 크기에 따라 카메라 거리 조정
+        const planetRadius = body.id === "sun" ? body.radius : body.radius * 0.62; // GLOBAL_PLANET_SCALE 적용
+        const cameraDistance = planetRadius * 4.5; // 더 멀리
+
+        // 태양(0, 0, 0)에서 행성으로 향하는 방향 벡터 (정규화)
+        const len = Math.hypot(x, z) || 1;
+        const normalX = x / len;
+        const normalZ = z / len;
+
+        // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
+        // 행성의 밝은 면을 정면에서 봄
+        const camX = x + normalX * cameraDistance;
+        const camY = y + cameraDistance * 0.15; // 약간 위에서
+        const camZ = z + normalZ * cameraDistance;
+
+        setFlyToTarget([camX, camY, camZ]);
+
         // 🔻 로켓 추적 해제 → 로켓은 가만히, 카메라는 천체 보기 모드
         setFollowRocket(false);
+
+        // 검색 후 입력창 초기화
+        setQ("");
+        setShowSuggestions(false);
     }, [bodyPositions, setSelectedId, setFlyToTarget, setFollowRocket]);
 
     const onKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
@@ -72,8 +103,8 @@ export default function SolarSearchSidebar() {
     };
 
     return (
-        <div className="pointer-events-auto w-72 bg-black/60 border border-white/15 rounded-xl p-3 text-white backdrop-blur-sm">
-            <div className="font-semibold mb-2">Search planets</div>
+        <div className="pointer-events-auto w-full lg:w-72 bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 text-white backdrop-blur-sm">
+            <div className="text-sm sm:text-base font-semibold mb-2">Search planets</div>
 
             <div className="relative">
                 <input
@@ -83,8 +114,8 @@ export default function SolarSearchSidebar() {
                     onKeyDown={onKeyDown}
                     onFocus={handleFocus}
                     onBlur={handleBlur}
-                    placeholder='Try "Earth", "Mars", "Saturn" (↑/↓, Enter, Esc)'
-                    className="w-full rounded-md bg-black/60 text-white px-3 py-2 outline-none border border-white/15"
+                    placeholder='Try "Earth", "Mars"...'
+                    className="w-full rounded-md bg-black/60 text-white px-2 sm:px-3 py-1.5 sm:py-2 text-sm outline-none border border-white/15"
                 />
 
                 <div className="mt-2 flex items-center justify-between text-xs">

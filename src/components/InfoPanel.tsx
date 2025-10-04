@@ -11,16 +11,16 @@ export default function InfoPanel() {
 
     if (!b) {
         return (
-            <div className="w-72 text-white/80 text-sm">
+            <div className="w-full sm:w-64 lg:w-72 text-white/80 text-xs sm:text-sm">
                 <div className="opacity-70">Click a planet to inspect.</div>
             </div>
         );
     }
 
     return (
-        <div className="w-72 text-white">
+        <div className="w-full sm:w-64 lg:w-72 text-white">
             <div className="text-xs opacity-70">SELECTED</div>
-            <div className="text-lg font-semibold">{b.name}</div>
+            <div className="text-base sm:text-lg font-semibold">{b.name}</div>
 
             {"periodDays" in b && b.periodDays ? (
                 <>

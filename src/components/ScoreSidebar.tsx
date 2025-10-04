@@ -13,8 +13,8 @@ export default function ScoreSidebar() {
     }, [threshold]);
 
     return (
-        <div className="pointer-events-auto w-64 bg-black/55 border border-white/15 rounded-xl p-3 text-white backdrop-blur-sm">
-            <div className="font-semibold">Score filter</div>
+        <div className="pointer-events-auto w-full lg:w-64 bg-black/55 border border-white/15 rounded-xl p-2 sm:p-3 text-white backdrop-blur-sm">
+            <div className="text-sm sm:text-base font-semibold">Score filter</div>
             <div className="text-xs opacity-80 mb-2">Score ≥ {threshold}%</div>
 
             <input
