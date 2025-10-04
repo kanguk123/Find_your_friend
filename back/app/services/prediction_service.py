@@ -1,8 +1,6 @@
 """
 Prediction service - AI model prediction logic
 """
-import random
-import numpy as np
 from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
 from app.models.planet import Planet
@@ -14,70 +12,11 @@ from app.schemas.model import RewardResponse
 from app.config import settings
 from app.exceptions import NotFoundException, AIServiceException
 from app.services.planet_service import PlanetService
+from app.ml.model_wrapper import get_model
 
 
 class PredictionService:
-    """Service for AI prediction operations"""
-
-    @staticmethod
-    def _generate_dummy_prediction(planet: Planet, include_details: bool = True) -> PredictionResponse:
-        """
-        Generate dummy prediction for development/testing
-
-        Args:
-            planet: Planet to predict
-            include_details: Whether to include feature contributions
-
-        Returns:
-            PredictionResponse with dummy data
-        """
-        probability = planet.ai_probability
-
-        # Determine prediction
-        prediction = "exoplanet" if probability >= 0.5 else "not_exoplanet"
-
-        # Determine confidence
-        if probability >= 0.9 or probability <= 0.1:
-            confidence = "high"
-        elif probability >= 0.7 or probability <= 0.3:
-            confidence = "medium"
-        else:
-            confidence = "low"
-
-        # Generate feature contributions if requested
-        feature_contributions = None
-        top_correlations = None
-
-        if include_details:
-            # Select top 10 most important features
-            feature_contributions = []
-            feature_names = list(planet.features.keys())[:10]
-
-            for i, feature_name in enumerate(feature_names):
-                contribution = FeatureContribution(
-                    feature_name=feature_name,
-                    value=planet.features[feature_name],
-                    contribution=random.uniform(-0.3, 0.3),
-                    importance=1.0 - (i * 0.05)  # Decreasing importance
-                )
-                feature_contributions.append(contribution)
-
-            # Generate top correlations
-            top_correlations = {
-                feature_names[i]: random.uniform(-1, 1)
-                for i in range(min(5, len(feature_names)))
-            }
-
-        return PredictionResponse(
-            planet_id=planet.id,
-            planet_name=planet.name,
-            probability=probability,
-            prediction=prediction,
-            confidence=confidence,
-            model_version=planet.model_version,
-            feature_contributions=feature_contributions,
-            top_correlations=top_correlations
-        )
+    """Service for AI prediction operations using real trained model"""
 
     @staticmethod
     def predict_planet(
@@ -86,29 +25,64 @@ class PredictionService:
         include_details: bool = True
     ) -> PredictionResponse:
         """
-        Predict if a planet is an exoplanet
+        Predict if a planet is an exoplanet using the trained RandomForest model
 
         Args:
             db: Database session
             planet_id: Planet ID
-            include_details: Whether to include detailed analysis
+            include_details: Whether to include detailed analysis (feature contributions)
 
         Returns:
-            PredictionResponse
+            PredictionResponse with model predictions
 
         Raises:
             NotFoundException: If planet not found
+            AIServiceException: If model prediction fails
         """
         planet = PlanetService.get_planet_by_id(db, planet_id)
 
-        # For now, use dummy predictions
-        # When AI service is ready, replace this with actual API call
-        if settings.USE_DUMMY_DATA:
-            return PredictionService._generate_dummy_prediction(planet, include_details)
-        else:
-            # TODO: Call actual AI service
-            # response = await ai_client.predict(planet.features)
-            raise AIServiceException("AI service integration not yet implemented")
+        try:
+            # Get model instance
+            model = get_model()
+
+            # Run prediction
+            result = model.predict(
+                features=planet.features,
+                threshold=0.5,
+                include_contributions=include_details
+            )
+
+            # Update planet with prediction if not already predicted
+            if planet.ai_probability is None:
+                PlanetService.update_planet_prediction(
+                    db=db,
+                    planet_id=planet.id,
+                    probability=result["probability"],
+                    prediction_label=result["prediction"],
+                    confidence=result["confidence"],
+                    model_version=result["model_version"]
+                )
+
+            # Build response
+            response = PredictionResponse(
+                planet_id=planet.id,
+                rowid=planet.rowid,
+                probability=result["probability"],
+                prediction=result["prediction"],
+                confidence=result["confidence"],
+                model_version=result["model_version"],
+                feature_contributions=result.get("feature_contributions"),
+                top_correlations=result.get("top_correlations")
+            )
+
+            return response
+
+        except FileNotFoundError as e:
+            raise AIServiceException(
+                f"Model file not found. Please train and save the model first. Error: {str(e)}"
+            )
+        except Exception as e:
+            raise AIServiceException(f"Prediction failed: {str(e)}")
 
     @staticmethod
     def predict_planet_simple(db: Session, planet_id: int) -> SimplePredictionResponse:
@@ -121,27 +95,47 @@ class PredictionService:
 
         Returns:
             SimplePredictionResponse
+
+        Raises:
+            NotFoundException: If planet not found
         """
         planet = PlanetService.get_planet_by_id(db, planet_id)
 
-        probability = planet.ai_probability
-        is_exoplanet = probability >= 0.5
+        try:
+            # Get model instance
+            model = get_model()
 
-        # Determine confidence level
-        if probability >= 0.9 or probability <= 0.1:
-            confidence_level = "high"
-        elif probability >= 0.7 or probability <= 0.3:
-            confidence_level = "medium"
-        else:
-            confidence_level = "low"
+            # Run prediction without details
+            result = model.predict(
+                features=planet.features,
+                threshold=0.5,
+                include_contributions=False
+            )
 
-        return SimplePredictionResponse(
-            planet_id=planet.id,
-            planet_name=planet.name,
-            probability=probability,
-            is_exoplanet=is_exoplanet,
-            confidence_level=confidence_level
-        )
+            # Update planet if needed
+            if planet.ai_probability is None:
+                PlanetService.update_planet_prediction(
+                    db=db,
+                    planet_id=planet.id,
+                    probability=result["probability"],
+                    prediction_label=result["prediction"],
+                    confidence=result["confidence"],
+                    model_version=result["model_version"]
+                )
+
+            # Build simple response
+            is_confirmed = result["prediction"] == "CONFIRMED"
+
+            return SimplePredictionResponse(
+                planet_id=planet.id,
+                rowid=planet.rowid,
+                probability=result["probability"],
+                is_confirmed=is_confirmed,
+                confidence_level=result["confidence"]
+            )
+
+        except Exception as e:
+            raise AIServiceException(f"Prediction failed: {str(e)}")
 
     @staticmethod
     def batch_predict(
@@ -171,6 +165,9 @@ class PredictionService:
             except NotFoundException:
                 # Skip planets that don't exist
                 continue
+            except AIServiceException:
+                # Skip planets that fail prediction
+                continue
 
         return predictions
 
@@ -178,6 +175,12 @@ class PredictionService:
     def calculate_reward(db: Session, planet_id: int) -> RewardResponse:
         """
         Calculate reward for discovering an exoplanet
+
+        Reward logic:
+        - CONFIRMED with high confidence (>=0.9): 100 points
+        - CONFIRMED with medium confidence (0.7-0.9): 50 points
+        - CONFIRMED with low confidence (0.5-0.7): 25 points
+        - FALSE POSITIVE: 0 points
 
         Args:
             db: Database session
@@ -191,29 +194,41 @@ class PredictionService:
         """
         planet = PlanetService.get_planet_by_id(db, planet_id)
 
-        probability = planet.ai_probability
-        reward_granted = probability >= 0.9
+        # Get prediction if not already predicted
+        if planet.ai_probability is None:
+            prediction = PredictionService.predict_planet(db, planet_id, include_details=False)
+            probability = prediction.probability
+            prediction_label = prediction.prediction
+        else:
+            probability = planet.ai_probability
+            prediction_label = planet.prediction_label or "UNKNOWN"
+
+        # Calculate reward based on prediction
+        reward_granted = prediction_label == "CONFIRMED"
 
         if reward_granted:
-            # High confidence exoplanet discovery
-            points_earned = 100
-            message = f"Congratulations! You discovered a confirmed exoplanet: {planet.name}"
-
-            # Determine upgrade level based on probability
-            if probability >= 0.99:
-                upgrade_level = 3  # Highest tier
-            elif probability >= 0.95:
+            # CONFIRMED exoplanet - calculate reward by confidence
+            if probability >= 0.9:
+                points_earned = 100
+                upgrade_level = 3
+                message = f"🎉 Excellent! High confidence CONFIRMED exoplanet (rowid={planet.rowid}, prob={probability:.2%})"
+            elif probability >= 0.7:
+                points_earned = 50
                 upgrade_level = 2
+                message = f"🌟 Great! Medium confidence CONFIRMED exoplanet (rowid={planet.rowid}, prob={probability:.2%})"
             else:
+                points_earned = 25
                 upgrade_level = 1
+                message = f"✨ Nice! Low confidence CONFIRMED exoplanet (rowid={planet.rowid}, prob={probability:.2%})"
         else:
+            # FALSE POSITIVE or uncertain
             points_earned = 0
-            message = f"Planet {planet.name} has a {probability*100:.1f}% chance of being an exoplanet. Keep searching!"
             upgrade_level = None
+            message = f"This planet (rowid={planet.rowid}) is predicted as FALSE POSITIVE (prob={probability:.2%}). Keep searching!"
 
         return RewardResponse(
             planet_id=planet.id,
-            planet_name=planet.name,
+            planet_name=f"rowid_{planet.rowid}",
             probability=probability,
             reward_granted=reward_granted,
             points_earned=points_earned,

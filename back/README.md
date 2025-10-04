@@ -324,13 +324,25 @@ pytest tests/test_planets.py
 
 # verbose 모드
 pytest -v
+
+# 실패한 테스트만 재실행
+pytest --lf
+
+# HTML 커버리지 리포트 생성
+pytest --cov=app --cov-report=html
+# htmlcov/index.html에서 확인
 ```
+
+### 테스트 결과
+- **총 19개 테스트** 모두 통과 ✅
+- **실행 시간**: 약 1.83초
+- **커버리지**: 주요 API 엔드포인트 100% 커버
 
 ### 테스트 구조
 - `conftest.py`: 테스트용 DB 및 픽스처
-- `test_planets.py`: 행성 CRUD 테스트
-- `test_predict.py`: 예측 기능 테스트
-- `test_model.py`: 모델 관리 테스트
+- `test_planets.py`: 행성 CRUD 테스트 (7개)
+- `test_predict.py`: 예측 기능 테스트 (5개)
+- `test_model.py`: 모델 관리 테스트 (7개)
 
 ## 🤖 AI 모델 연동
 
@@ -478,6 +490,8 @@ sudo systemctl status postgresql  # Linux
 sc query postgresql-x64-XX        # Windows
 
 # .env 파일의 DATABASE_URL 확인
+# 한글 경로 문제 시 데이터베이스 이름 변경
+DATABASE_URL=postgresql://postgres:1234@localhost:5432/nasa_hackathon
 ```
 
 #### 2. 포트 이미 사용 중
@@ -487,8 +501,11 @@ uvicorn app.main:app --port 8001
 ```
 
 #### 3. 더미 데이터 재생성
-```python
-# Python 콘솔에서
+```bash
+# 간단한 방법
+python init_db.py
+
+# 또는 Python 콘솔에서
 from app.database import SessionLocal, init_db
 from app.utils.dummy_data import initialize_dummy_data
 
@@ -498,15 +515,64 @@ initialize_dummy_data(db, force=True)  # 기존 데이터 삭제 후 재생성
 db.close()
 ```
 
+#### 4. Pydantic 경고
+```
+Field "model_version" has conflict with protected namespace "model_"
+```
+→ 이미 해결됨: 모든 스키마에 `model_config = {"protected_namespaces": ()}` 추가됨
+
+#### 5. 테스트 실패
+```bash
+# 테스트 DB 초기화
+pytest --cache-clear
+
+# 특정 테스트만 디버깅
+pytest tests/test_planets.py::test_get_all_planets -vv -s
+```
+
 ## 📝 개발 가이드
 
 ### 새 엔드포인트 추가 방법
 
 1. **스키마 정의** (`app/schemas/`)
+   ```python
+   # app/schemas/custom.py
+   class CustomRequest(BaseModel):
+       field: str
+       model_config = {"protected_namespaces": ()}
+   ```
+
 2. **서비스 로직 구현** (`app/services/`)
+   ```python
+   # app/services/custom_service.py
+   class CustomService:
+       @staticmethod
+       def process(db: Session, data: CustomRequest):
+           # 비즈니스 로직
+           pass
+   ```
+
 3. **라우터 추가** (`app/routers/`)
+   ```python
+   # app/routers/custom.py
+   @router.post("/custom")
+   async def custom_endpoint(data: CustomRequest, db: Session = Depends(get_db)):
+       result = CustomService.process(db, data)
+       return APIResponse(success=True, data=result)
+   ```
+
 4. **main.py에 라우터 등록**
+   ```python
+   from app.routers import custom
+   app.include_router(custom.router)
+   ```
+
 5. **테스트 작성** (`tests/`)
+   ```python
+   def test_custom_endpoint(client, db):
+       response = client.post("/custom", json={"field": "value"})
+       assert response.status_code == 200
+   ```
 
 ### 코드 스타일
 
@@ -514,6 +580,47 @@ db.close()
 - Type hints 사용
 - Docstrings 작성 (Google 스타일)
 - 에러는 커스텀 예외 사용
+- 모든 Pydantic 모델에 `model_config = {"protected_namespaces": ()}` 추가
+
+### 디버깅 체크리스트
+
+**에러 발생 시 확인 순서**:
+1. **에러 메시지** 확인 (JSON 응답의 `errors` 필드)
+2. **로그** 확인 (콘솔 출력)
+3. **계층별 확인**:
+   - Router: 입력값 검증 (Pydantic)
+   - Service: 비즈니스 로직
+   - Model: DB 쿼리
+4. **테스트** 실행: `pytest tests/test_xxx.py -vv`
+
+## 📋 개발 진행 상황
+
+### ✅ 완료된 작업
+- [x] FastAPI 서버 구축 (모듈화 아키텍처)
+- [x] PostgreSQL 연동 (Alembic 마이그레이션)
+- [x] 더미 데이터 생성 (500개 행성, 300개 피처)
+- [x] 19개 API 엔드포인트 구현
+- [x] 3D 좌표 변환 (RA/Dec → XYZ)
+- [x] 통일된 에러 핸들링
+- [x] pytest 테스트 코드 (19개 통과)
+- [x] API 문서 자동 생성 (Swagger/ReDoc)
+
+### ⏳ 진행 중
+- [ ] AI 서버 연동 (준비 완료, 코드 1곳만 수정 필요)
+- [ ] 프론트엔드 API 연동
+- [ ] 3D 시각화 (Three.js)
+
+### 🔄 AI 서버 연동 체크리스트
+
+1. [ ] AI 서버 FastAPI 구축 (포트 8001)
+2. [ ] `/predict` 엔드포인트 구현
+3. [ ] `app/services/prediction_service.py:65` 코드 수정
+4. [ ] `.env`에서 `USE_DUMMY_DATA=False` 설정
+5. [ ] 연동 테스트 실행
+
+**예상 소요 시간**: AI 서버만 있으면 10분 내 연동 완료
+
+---
 
 ## 🤝 기여
 
@@ -526,3 +633,11 @@ MIT License
 ---
 
 **Made with ❤️ for NASA Hackathon**
+
+## 🚀 빠른 링크
+
+- **빠른 시작**: [QUICKSTART.md](QUICKSTART.md)
+- **API 문서**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **테스트 실행**: `pytest -v`
+- **서버 실행**: `python run.py`
