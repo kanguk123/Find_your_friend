@@ -55,7 +55,7 @@ async def get_planet_detail(
 
     return APIResponse(
         success=True,
-        message=f"Retrieved planet {planet.name}",
+        message=f"Retrieved planet rowid={planet.rowid}",
         data=detail
     )
 
@@ -104,6 +104,6 @@ async def create_planet(
 
     return APIResponse(
         success=True,
-        message=f"Planet {planet.name} created successfully",
+        message=f"Planet rowid={planet.rowid} created successfully",
         data=detail
     )

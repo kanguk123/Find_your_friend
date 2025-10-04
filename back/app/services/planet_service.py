@@ -11,7 +11,6 @@ from app.schemas.planet import (
 )
 from app.utils.coordinates import ra_dec_to_xyz
 from app.exceptions import NotFoundException, AlreadyExistsException
-import math
 
 
 class PlanetService:
@@ -60,9 +59,9 @@ class PlanetService:
         return planet
 
     @staticmethod
-    def get_planet_by_name(db: Session, name: str) -> Optional[Planet]:
-        """Get planet by name"""
-        return db.query(Planet).filter(Planet.name == name).first()
+    def get_planet_by_rowid(db: Session, rowid: int) -> Optional[Planet]:
+        """Get planet by original NASA rowid"""
+        return db.query(Planet).filter(Planet.rowid == rowid).first()
 
     @staticmethod
     def create_planet(db: Session, planet_data: PlanetCreate) -> Planet:
@@ -77,21 +76,23 @@ class PlanetService:
             Created planet instance
 
         Raises:
-            AlreadyExistsException: If planet with same name exists
+            AlreadyExistsException: If planet with same rowid exists
         """
         # Check if planet already exists
-        existing = PlanetService.get_planet_by_name(db, planet_data.name)
+        existing = PlanetService.get_planet_by_rowid(db, planet_data.rowid)
         if existing:
-            raise AlreadyExistsException("Planet", planet_data.name)
+            raise AlreadyExistsException("Planet", f"rowid={planet_data.rowid}")
 
         # Create new planet
         planet = Planet(
-            name=planet_data.name,
+            rowid=planet_data.rowid,
             ra=planet_data.ra,
             dec=planet_data.dec,
             r=planet_data.r,
-            status=planet_data.status,
+            disposition=planet_data.disposition,
             ai_probability=planet_data.ai_probability,
+            prediction_label=planet_data.prediction_label,
+            confidence=planet_data.confidence,
             model_version=planet_data.model_version,
             features=planet_data.features
         )
@@ -126,8 +127,8 @@ class PlanetService:
         if filters.max_probability is not None:
             query = query.filter(Planet.ai_probability <= filters.max_probability)
 
-        if filters.status:
-            query = query.filter(Planet.status.in_(filters.status))
+        if filters.disposition:
+            query = query.filter(Planet.disposition.in_(filters.disposition))
 
         if filters.min_ra is not None:
             query = query.filter(Planet.ra >= filters.min_ra)
@@ -140,12 +141,6 @@ class PlanetService:
 
         if filters.max_dec is not None:
             query = query.filter(Planet.dec <= filters.max_dec)
-
-        if filters.min_r is not None:
-            query = query.filter(Planet.r >= filters.min_r)
-
-        if filters.max_r is not None:
-            query = query.filter(Planet.r <= filters.max_r)
 
         # Get total count
         total = query.count()
@@ -167,16 +162,18 @@ class PlanetService:
         Returns:
             PlanetListItem schema
         """
-        coordinates_3d = ra_dec_to_xyz(planet.ra, planet.dec, planet.r)
+        # Use planet's r value for 3D visualization
+        coordinates_3d = ra_dec_to_xyz(planet.ra, planet.dec, r=planet.r)
 
         return PlanetListItem(
             id=planet.id,
-            name=planet.name,
+            rowid=planet.rowid,
             ra=planet.ra,
             dec=planet.dec,
             r=planet.r,
-            status=planet.status,
+            disposition=planet.disposition,
             ai_probability=planet.ai_probability,
+            prediction_label=planet.prediction_label,
             coordinates_3d=coordinates_3d
         )
 
@@ -191,16 +188,19 @@ class PlanetService:
         Returns:
             PlanetDetail schema
         """
-        coordinates_3d = ra_dec_to_xyz(planet.ra, planet.dec, planet.r)
+        # Use planet's r value for 3D visualization
+        coordinates_3d = ra_dec_to_xyz(planet.ra, planet.dec, r=planet.r)
 
         return PlanetDetail(
             id=planet.id,
-            name=planet.name,
+            rowid=planet.rowid,
             ra=planet.ra,
             dec=planet.dec,
             r=planet.r,
-            status=planet.status,
+            disposition=planet.disposition,
             ai_probability=planet.ai_probability,
+            prediction_label=planet.prediction_label,
+            confidence=planet.confidence,
             model_version=planet.model_version,
             features=planet.features,
             coordinates_3d=coordinates_3d,
@@ -213,6 +213,8 @@ class PlanetService:
         db: Session,
         planet_id: int,
         probability: float,
+        prediction_label: str,
+        confidence: str,
         model_version: str
     ) -> Planet:
         """
@@ -221,7 +223,9 @@ class PlanetService:
         Args:
             db: Database session
             planet_id: Planet ID
-            probability: New AI probability
+            probability: AI probability
+            prediction_label: Predicted label (CONFIRMED/FALSE POSITIVE)
+            confidence: Confidence level
             model_version: Model version used
 
         Returns:
@@ -233,15 +237,9 @@ class PlanetService:
         planet = PlanetService.get_planet_by_id(db, planet_id)
 
         planet.ai_probability = probability
+        planet.prediction_label = prediction_label
+        planet.confidence = confidence
         planet.model_version = model_version
-
-        # Update status based on probability
-        if probability >= 0.9:
-            planet.status = PlanetStatus.CONFIRMED
-        elif probability >= 0.7:
-            planet.status = PlanetStatus.CANDIDATE
-        else:
-            planet.status = PlanetStatus.UNKNOWN
 
         db.commit()
         db.refresh(planet)
