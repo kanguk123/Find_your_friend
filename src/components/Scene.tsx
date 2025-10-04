@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Suspense, useState, useEffect, useRef } from "react";
+import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { Vector3 } from "three";
+import { Vector3, TextureLoader, BackSide } from "three";
 import Link from "next/link";
 import SolarSystem from "./SolarSystem";
 import SolarSearchSidebar from "./SolarSearchSidebar";
@@ -25,6 +25,17 @@ import { useStore } from "@/state/useStore";
 
 // 키 입력 상태 관리
 const keysPressed: Record<string, boolean> = {};
+
+function Skybox() {
+  const texture = useLoader(TextureLoader, "/textures/sky_custom.jpg");
+
+  return (
+    <mesh>
+      <sphereGeometry args={[500, 60, 40]} />
+      <meshBasicMaterial map={texture} side={BackSide} />
+    </mesh>
+  );
+}
 
 function CameraLight() {
   const { camera } = useThree();
@@ -306,7 +317,6 @@ export default function Scene() {
           );
         }}
       >
-        <color attach="background" args={["#000"]} />
         <ambientLight intensity={0.06} />
 
         {/* Expert 모드에서는 OrbitControls 사용 */}
@@ -322,6 +332,7 @@ export default function Scene() {
         )}
 
         <Suspense fallback={null}>
+          <Skybox />
           <SolarSystem timeScale={autoRotate ? 60 : 0.0001} />
 
           {/* 외계행성 표시 */}
