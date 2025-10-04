@@ -13,17 +13,14 @@ import Rocket from "./Rocket";
 import BlackHole from "./BlackHole";
 import GameHUD from "./GameHUD";
 import ModeSwitch from "./ModeSwitch";
-import PlanetCard from "./PlanetCard";
 import FavoriteFilter from "./FavoriteFilter";
 import HyperparameterPanel from "./HyperparameterPanel";
 import ModelAccuracy from "./ModelAccuracy";
-import ExoplanetLoader from "./ExoplanetLoader";
 import ExoplanetPoints from "./ExoplanetPoints";
 import PlanetListPanel from "./PlanetListPanel";
 import { useStore } from "@/state/useStore";
 
-// 키 입력 상태 관리
-const keysPressed: Record<string, boolean> = {};
+// 키 입력 상태는 useStore에서 관리
 
 function Skybox() {
   const texture = useLoader(TextureLoader, "/textures/sky_custom.jpg");
@@ -47,17 +44,25 @@ function CameraRig() {
     bodyPositions,
     isCameraMoving,
     setIsCameraMoving,
+    keysPressed,
   } = useStore();
 
   useFrame(() => {
-    // Player 모드에서 WASD 키보드로 카메라 이동 (Expert 모드와 동일)
-    if (mode === "player" && controls && !flyToTarget) {
+    // Player 모드와 Expert 모드에서 WASD 키보드로 카메라 이동
+    if ((mode === "player" || mode === "expert") && controls && !flyToTarget) {
       const moveSpeed = 0.05; // Expert 모드와 동일한 이동 속도
       const target = (controls as unknown as { target: Vector3 }).target;
       const cameraPos = camera.position;
 
-      // 카메라에서 타겟으로의 방향 벡터
-      const direction = new Vector3().subVectors(target, cameraPos);
+      // Expert 모드에서는 선택된 행성을 중심으로 카메라 이동
+      let centerPoint = new Vector3(0, 0, 0); // 기본 중심점 (태양)
+      if (mode === "expert" && selectedId && bodyPositions[selectedId]) {
+        const [px, py, pz] = bodyPositions[selectedId];
+        centerPoint.set(px, py, pz);
+      }
+
+      // 카메라에서 중심점으로의 방향 벡터
+      const direction = new Vector3().subVectors(centerPoint, cameraPos);
 
       let shouldUpdate = false;
 
@@ -65,13 +70,17 @@ function CameraRig() {
       if (keysPressed["w"] || keysPressed["arrowup"]) {
         direction.normalize().multiplyScalar(moveSpeed);
         camera.position.add(direction);
-        target.add(direction);
+        if (mode === "expert") {
+          target.add(direction);
+        }
         shouldUpdate = true;
       }
       if (keysPressed["s"] || keysPressed["arrowdown"]) {
         direction.normalize().multiplyScalar(-moveSpeed);
         camera.position.add(direction);
-        target.add(direction);
+        if (mode === "expert") {
+          target.add(direction);
+        }
         shouldUpdate = true;
       }
 
@@ -81,7 +90,9 @@ function CameraRig() {
         const right = new Vector3().crossVectors(direction, up).normalize();
         right.multiplyScalar(moveSpeed);
         camera.position.add(right);
-        target.add(right);
+        if (mode === "expert") {
+          target.add(right);
+        }
         shouldUpdate = true;
       }
       if (keysPressed["d"] || keysPressed["arrowright"]) {
@@ -89,7 +100,9 @@ function CameraRig() {
         const right = new Vector3().crossVectors(direction, up).normalize();
         right.multiplyScalar(-moveSpeed);
         camera.position.add(right);
-        target.add(right);
+        if (mode === "expert") {
+          target.add(right);
+        }
         shouldUpdate = true;
       }
 
@@ -250,6 +263,8 @@ export default function Scene() {
     planets,
     setFlyToTarget,
     flyToTarget,
+    bodyPositions,
+    setKeysPressed,
   } = useStore();
   const selectedPlanet = planets.find((p) => p.id === selectedId);
   // 외계행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
@@ -282,7 +297,7 @@ export default function Scene() {
         ].includes(key)
       ) {
         e.preventDefault();
-        keysPressed[key] = true;
+        setKeysPressed(key, true);
       }
     };
 
@@ -300,7 +315,7 @@ export default function Scene() {
           "arrowright",
         ].includes(key)
       ) {
-        keysPressed[key] = false;
+        setKeysPressed(key, false);
       }
     };
 
@@ -310,13 +325,10 @@ export default function Scene() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [setFlyToTarget, setSelectedId]);
+  }, [setFlyToTarget, setSelectedId, setKeysPressed]);
 
   return (
     <div className="relative h-screen w-full">
-      {/* 샘플 데이터 로더 */}
-      <ExoplanetLoader />
-
       {/* 모드 전환 UI - 최상단 중앙 */}
       <div className="pointer-events-none absolute top-3 left-0 right-0 z-50 flex justify-center px-4">
         <div className="pointer-events-auto">
@@ -417,14 +429,6 @@ export default function Scene() {
           </Link>
         </div>
       </div>
-
-      {/* 행성 카드 (태양계 행성만 표시) */}
-      {selectedPlanet && !isExoplanet && (
-        <PlanetCard
-          planet={selectedPlanet}
-          onClose={() => setSelectedId(undefined)}
-        />
-      )}
 
       {/* 3D */}
       <Canvas

@@ -64,33 +64,13 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
     setBodyPositions,
     isCameraMoving,
     setIsCameraMoving,
-    setPlanets,
+    planets,
   } = useStore();
-  const [exoplanets, setExoplanets] = useState<Planet[]>([]);
-
-  // test.json에서 데이터 로드
-  useEffect(() => {
-    fetch("/test.json")
-      .then((res) => res.json())
-      .then((data) => {
-        // test.json 데이터를 Planet 타입으로 변환
-        const planets: Planet[] = data.planets.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          ra: p.ra,
-          dec: p.dec,
-          score: p.score,
-          teq: p.teq,
-          features: p.features,
-        }));
-        console.log("Loaded planets:", planets.length);
-        setExoplanets(planets);
-        setPlanets(planets); // store에도 업데이트
-      })
-      .catch((err) => {
-        console.error("Failed to load exoplanet data:", err);
-      });
-  }, []);
+  // useStore에서 외계행성 데이터 가져오기
+  const exoplanets = useMemo(
+    () => planets.filter((p) => p.ra !== undefined && p.dec !== undefined),
+    [planets]
+  );
 
   const dotRadius = Math.max(0.3, radius * 0.02); // 크기 증가
   const ringInner = dotRadius * 1.8;
@@ -127,7 +107,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       Object.keys(positions).length,
       "planets"
     );
-  }, [points, setBodyPositions]);
+  }, [points]);
 
   console.log("Filtered points:", points.length, "threshold:", threshold);
   console.log("Dot radius:", dotRadius);

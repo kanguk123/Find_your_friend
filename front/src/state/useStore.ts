@@ -48,6 +48,10 @@ type Store = {
   isCameraMoving: boolean;
   setIsCameraMoving: (v: boolean) => void;
 
+  // === 키 입력 상태 ===
+  keysPressed: Record<string, boolean>;
+  setKeysPressed: (key: string, pressed: boolean) => void;
+
   // === 카메라 fly-to (행성 보기/점프) ===
   flyToTarget?: Vec3;
   setFlyToTarget: (v?: Vec3) => void;
@@ -112,6 +116,13 @@ export const useStore = create<Store>((set) => ({
   // === 카메라 이동 상태 ===
   isCameraMoving: false,
   setIsCameraMoving: (v) => set({ isCameraMoving: v }),
+
+  // === 키 입력 상태 ===
+  keysPressed: {},
+  setKeysPressed: (key, pressed) =>
+    set((state) => ({
+      keysPressed: { ...state.keysPressed, [key]: pressed },
+    })),
 
   // === 카메라 fly-to ===
   flyToTarget: undefined,

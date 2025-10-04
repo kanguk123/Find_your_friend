@@ -159,6 +159,11 @@ export default function PlanetListPanel() {
       setFlyToTarget([camX, camY, camZ]);
     } else {
       // 외계행성의 경우 - ExoplanetPoints.tsx와 동일한 로직 사용
+      if (!planet.ra || !planet.dec) {
+        console.warn("외계행성 데이터가 불완전합니다:", planet);
+        return;
+      }
+
       const phi = (planet.ra * Math.PI) / 180;
       const theta = (planet.dec * Math.PI) / 180;
       const radius = 30;
