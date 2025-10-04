@@ -12,6 +12,7 @@ engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,  # Verify connections before using
     echo=settings.DEBUG,  # Log SQL queries in debug mode
+    connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {}
 )
 
 # Create SessionLocal class

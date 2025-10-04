@@ -16,7 +16,7 @@ import ModeSwitch from "./ModeSwitch";
 import FavoriteFilter from "./FavoriteFilter";
 import HyperparameterPanel from "./HyperparameterPanel";
 import ModelAccuracy from "./ModelAccuracy";
-import ExoplanetPoints from "./ExoplanetPoints";
+import ExoplanetPointsAPI from "./ExoplanetPointsAPI";
 import PlanetListPanel from "./PlanetListPanel";
 import { useStore } from "@/state/useStore";
 
@@ -442,7 +442,7 @@ export default function Scene() {
           <SolarSystem timeScale={autoRotate ? 60 : 0.0001} />
 
           {/* 외계행성 표시 - 태양계 바깥쪽 */}
-          <ExoplanetPoints radius={30} />
+          <ExoplanetPointsAPI />
 
           {/* 로켓은 Player 모드에서만 표시 */}
           {mode === "player" && <Rocket />}

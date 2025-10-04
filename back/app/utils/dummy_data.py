@@ -93,11 +93,11 @@ def generate_dummy_planets(count: int = 500, model_version: str = "v0.1") -> Lis
 
         # Create planet instance
         planet = Planet(
-            name=f"KOI-{1000 + i:05d}",  # Kepler Object of Interest naming
+            rowid=1000 + i,  # Use rowid instead of name
             ra=ra,
             dec=dec,
             r=r,
-            status=status,
+            disposition=status,  # Use disposition instead of status
             ai_probability=ai_probability,
             model_version=model_version,
             features=features
