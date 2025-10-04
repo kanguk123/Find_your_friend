@@ -45,9 +45,27 @@ function CameraRig() {
     isCameraMoving,
     setIsCameraMoving,
     keysPressed,
+    cameraPosition,
+    setCameraPosition,
   } = useStore();
 
   useFrame(() => {
+    // 카메라 위치 직접 설정 (초기화)
+    if (cameraPosition) {
+      const [x, y, z] = cameraPosition;
+      camera.position.set(x, y, z);
+      if (controls) {
+        const orbitControls = controls as unknown as {
+          target: Vector3;
+          update: () => void;
+        };
+        orbitControls.target.set(0, 0, 0);
+        orbitControls.update();
+      }
+      setCameraPosition(undefined); // 한 번만 적용
+      console.log("Camera position set to:", cameraPosition);
+    }
+
     // Player 모드와 Expert 모드에서 WASD 키보드로 카메라 이동
     if ((mode === "player" || mode === "expert") && controls && !flyToTarget) {
       const moveSpeed = 0.05; // Expert 모드와 동일한 이동 속도

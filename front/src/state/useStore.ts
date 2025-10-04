@@ -56,6 +56,10 @@ type Store = {
   flyToTarget?: Vec3;
   setFlyToTarget: (v?: Vec3) => void;
 
+  // === 카메라 위치 직접 설정 ===
+  cameraPosition?: Vec3;
+  setCameraPosition: (pos?: Vec3) => void;
+
   // === 로켓 추적 여부 (true면 카메라가 로켓을 따라감)
   followRocket: boolean;
   setFollowRocket: (v: boolean) => void;
@@ -148,6 +152,10 @@ export const useStore = create<Store>((set) => ({
     }
     set({ flyToTarget: v });
   },
+
+  // === 카메라 위치 직접 설정 ===
+  cameraPosition: undefined,
+  setCameraPosition: (pos) => set({ cameraPosition: pos }),
 
   // === 로켓 추적 여부 ===
   followRocket: true,

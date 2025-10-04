@@ -20,30 +20,45 @@ export function calculatePlayerModeCameraPosition(
   }
 ): Vec3 {
   const [planetX, planetY, planetZ] = planetPosition;
-  const [rocketX, rocketY, rocketZ] = rocketPosition;
 
-  console.log("Player mode - Rocket position:", rocketPosition);
+  console.log("Player mode - Planet position:", planetPosition);
 
   // 카메라 거리 계산
   let cameraDistance: number;
   if (options?.isExoplanet) {
     // 외계행성: 구의 반경 기준으로 거리 계산
     const sphereRadius = options.sphereRadius || 30;
-    cameraDistance = sphereRadius * 1.2; // 외계행성은 원점에서 멀리 떨어져 있음
+    cameraDistance = sphereRadius * 0.8; // 외계행성 구의 80% 거리 (행성보다 안쪽)
   } else {
     cameraDistance = planetRadius * 4.5; // 태양계 행성
   }
 
-  // 로켓에서 행성으로의 방향 벡터 (정규화)
-  const dirX = planetX - rocketX;
-  const dirY = planetY - rocketY;
-  const dirZ = planetZ - rocketZ;
-  const len = Math.hypot(dirX, dirY, dirZ) || 1;
+  let camX: number, camY: number, camZ: number;
 
-  // 행성에서 로켓 방향으로 카메라 배치 (행성을 관찰)
-  const camX = planetX - (dirX / len) * cameraDistance;
-  const camY = planetY - (dirY / len) * cameraDistance + cameraDistance * 0.15;
-  const camZ = planetZ - (dirZ / len) * cameraDistance;
+  if (options?.isExoplanet) {
+    // 외계행성: Expert 모드와 동일하게 원점 기준으로 카메라 배치
+    const len = Math.hypot(planetX, planetY, planetZ) || 1;
+    const normalX = planetX / len;
+    const normalY = planetY / len;
+    const normalZ = planetZ / len;
+
+    // 원점에서 행성 방향으로 cameraDistance만큼 떨어진 위치 (행성보다 가까이)
+    camX = normalX * cameraDistance;
+    camY = normalY * cameraDistance;
+    camZ = normalZ * cameraDistance;
+  } else {
+    // 태양계 행성: Expert 모드와 동일하게 태양 기준으로 카메라 배치
+    const dirX = planetX;
+    const dirZ = planetZ;
+    const len = Math.hypot(dirX, dirZ) || 1;
+    const normalX = dirX / len;
+    const normalZ = dirZ / len;
+
+    // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
+    camX = planetX + normalX * cameraDistance;
+    camY = planetY + cameraDistance * 0.15;
+    camZ = planetZ + normalZ * cameraDistance;
+  }
 
   return [camX, camY, camZ];
 }

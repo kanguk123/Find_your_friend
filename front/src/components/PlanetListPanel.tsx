@@ -150,7 +150,9 @@ export default function PlanetListPanel() {
       }
     } else {
       // 외계행성의 경우
-      if (!planet.ra || !planet.dec) {
+      // ra와 dec가 undefined 또는 null인지 확인 (0은 유효한 값)
+      if (planet.ra === undefined || planet.ra === null ||
+          planet.dec === undefined || planet.dec === null) {
         console.warn("외계행성 데이터가 불완전합니다:", planet);
         return;
       }
