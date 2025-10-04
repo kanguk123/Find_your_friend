@@ -231,6 +231,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       {points.map(({ p, pos, color }) => {
         const clickHandler = new ExoplanetClickHandler();
         const visualState = clickHandler.getVisualState(p);
+        const isSelected = visualState.isSelected;
 
         return (
           <mesh
@@ -251,22 +252,15 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
               handlePlanetClick(p);
             }}
           >
-            <sphereGeometry args={[dotRadius, 16, 16]} />
+            <sphereGeometry args={[isSelected ? dotRadius * 1.5 : dotRadius, 16, 16]} />
             <meshBasicMaterial
-              color={visualState.isOtherSelected ? "#666666" : color}
+              color={visualState.isOtherSelected ? "#666666" : isSelected ? "#ffffff" : color}
               transparent
-              opacity={visualState.isOtherSelected ? visualState.opacity : 0.8}
+              opacity={visualState.isOtherSelected ? visualState.opacity : isSelected ? 1.0 : 0.8}
             />
           </mesh>
         );
       })}
-
-      {selPos && (
-        <mesh ref={ringRef} position={selPos}>
-          <ringGeometry args={[ringInner, ringOuter, RING_SEGMENTS]} />
-          <meshBasicMaterial color="#ffffff" transparent opacity={0.95} />
-        </mesh>
-      )}
     </>
   );
 }
