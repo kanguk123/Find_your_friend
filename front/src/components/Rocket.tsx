@@ -50,6 +50,7 @@ export default function Rocket() {
   const followRocket = useStore((s) => s.followRocket);
   const setFollowRocket = useStore((s) => s.setFollowRocket);
   const setFlyToTarget = useStore((s) => s.setFlyToTarget);
+  const setRocketPosition = useStore((s) => s.setRocketPosition);
 
   const key = useKey();
   const euler = useMemo(() => new Euler(0, 0, 0, "YXZ"), []);
@@ -174,6 +175,9 @@ export default function Rocket() {
 
     const fwd = new Vector3(0, 0, -1).applyQuaternion(g.quaternion);
     g.position.addScaledVector(fwd, vel.current * dt);
+
+    // 로켓 위치를 store에 업데이트
+    setRocketPosition([g.position.x, g.position.y, g.position.z]);
 
     // 추적 모드일 때만 카메라 갱신
     if (followRocket) {

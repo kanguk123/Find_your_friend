@@ -71,6 +71,10 @@ type Store = {
   bodyPositions: Record<string, Vec3>;
   setBodyPositions: (m: Record<string, Vec3>) => void;
 
+  // === 로켓 위치 ===
+  rocketPosition: Vec3;
+  setRocketPosition: (pos: Vec3) => void;
+
   // === Expert 모드 하이퍼파라미터 ===
   hyperparameters: {
     learningRate: number;
@@ -152,6 +156,10 @@ export const useStore = create<Store>((set) => ({
 
   bodyPositions: {},
   setBodyPositions: (m) => set({ bodyPositions: m }),
+
+  // === 로켓 위치 ===
+  rocketPosition: [0, 0, 0] as Vec3,
+  setRocketPosition: (pos) => set({ rocketPosition: pos }),
 
   // === Expert 모드 하이퍼파라미터 ===
   hyperparameters: {

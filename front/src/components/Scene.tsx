@@ -104,11 +104,12 @@ function CameraRig() {
       }
     }
 
-    // 🔻 로켓 추적 중이면 fly-to 무시 (항상 로켓 시점 우선)
-    if (followRocket) return;
-
     // flyToTarget이 없으면 리턴
     if (!flyToTarget) return;
+
+    // 🔻 로켓 추적 중이면 fly-to 무시 (항상 로켓 시점 우선)
+    // 단, 행성 클릭으로 인한 카메라 이동은 허용
+    if (followRocket && !isCameraMoving) return;
 
     const cur = camera.position;
     const [tx, ty, tz] = flyToTarget;
@@ -188,6 +189,14 @@ export default function Scene() {
     const handleKeyDown = (e: KeyboardEvent) => {
       // ESC 키로 카메라 고정 해제 (선택은 유지)
       if (e.key === "Escape") {
+        setFlyToTarget(undefined);
+        return;
+      }
+
+      // Player 모드에서 스페이스바로 선택 해제
+      if (mode === "player" && e.code === "Space") {
+        e.preventDefault();
+        setSelectedId(undefined);
         setFlyToTarget(undefined);
         return;
       }

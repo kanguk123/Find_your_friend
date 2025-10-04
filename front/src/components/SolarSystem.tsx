@@ -206,6 +206,8 @@ export default function SolarSystem({
     isCameraMoving,
     setIsCameraMoving,
     flyToTarget,
+    mode,
+    rocketPosition,
   } = useStore();
 
   const cut = threshold / 100;
@@ -361,18 +363,38 @@ export default function SolarSystem({
             const planetRadius = renderRadius(p);
             const cameraDistance = planetRadius * 4.5; // 더 멀리
 
-            // 태양(0, 0, 0)에서 행성으로 향하는 방향 벡터 (정규화)
-            const dirX = g.position.x;
-            const dirZ = g.position.z;
-            const len = Math.hypot(dirX, dirZ) || 1;
-            const normalX = dirX / len;
-            const normalZ = dirZ / len;
+            let camX, camY, camZ;
 
-            // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
-            // 행성의 밝은 면을 정면에서 봄
-            const camX = g.position.x + normalX * cameraDistance;
-            const camY = g.position.y + cameraDistance * 0.15; // 약간 위에서
-            const camZ = g.position.z + normalZ * cameraDistance;
+            if (mode === "player") {
+              // Player 모드: 로켓의 현재 위치를 기준으로 카메라 위치 계산
+              const [rocketX, rocketY, rocketZ] = rocketPosition;
+
+              // 로켓에서 행성으로의 방향 벡터
+              const dirX = g.position.x - rocketX;
+              const dirY = g.position.y - rocketY;
+              const dirZ = g.position.z - rocketZ;
+              const len = Math.hypot(dirX, dirY, dirZ) || 1;
+
+              // 행성에서 로켓 방향으로 카메라 배치 (행성을 관찰)
+              camX = g.position.x - (dirX / len) * cameraDistance;
+              camY =
+                g.position.y -
+                (dirY / len) * cameraDistance +
+                cameraDistance * 0.15;
+              camZ = g.position.z - (dirZ / len) * cameraDistance;
+            } else {
+              // Expert 모드: 기존 로직 사용
+              const dirX = g.position.x;
+              const dirZ = g.position.z;
+              const len = Math.hypot(dirX, dirZ) || 1;
+              const normalX = dirX / len;
+              const normalZ = dirZ / len;
+
+              // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
+              camX = g.position.x + normalX * cameraDistance;
+              camY = g.position.y + cameraDistance * 0.15;
+              camZ = g.position.z + normalZ * cameraDistance;
+            }
 
             setFlyToTarget([camX, camY, camZ]);
 
