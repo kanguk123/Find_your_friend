@@ -60,6 +60,12 @@ type Store = {
   followRocket: boolean;
   setFollowRocket: (v: boolean) => void;
 
+  // === 로켓 카메라 상태 ===
+  rocketCameraMode: "follow" | "planet_view";
+  setRocketCameraMode: (mode: "follow" | "planet_view") => void;
+  rocketCameraTarget?: string; // 현재 보고 있는 행성 ID
+  setRocketCameraTarget: (target?: string) => void;
+
   // === 게임 상태 (리셋 등)
   rocketAlive: boolean;
   setRocketAlive: (v: boolean) => void;
@@ -146,6 +152,12 @@ export const useStore = create<Store>((set) => ({
   // === 로켓 추적 여부 ===
   followRocket: true,
   setFollowRocket: (v) => set({ followRocket: v }),
+
+  // === 로켓 카메라 상태 ===
+  rocketCameraMode: "follow" as const,
+  setRocketCameraMode: (mode) => set({ rocketCameraMode: mode }),
+  rocketCameraTarget: undefined,
+  setRocketCameraTarget: (target) => set({ rocketCameraTarget: target }),
 
   // === 게임 ===
   rocketAlive: true,

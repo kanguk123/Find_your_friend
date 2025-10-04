@@ -62,6 +62,13 @@ export default function Rocket() {
 
   const flyToTargetRaw = useStore((s) => s.flyToTarget) as FlyTo;
   const setFlyToTarget = useStore((s) => s.setFlyToTarget);
+  const setIsCameraMoving = useStore((s) => s.setIsCameraMoving);
+
+  // 로켓 카메라 상태
+  const rocketCameraMode = useStore((s) => s.rocketCameraMode);
+  const setRocketCameraMode = useStore((s) => s.setRocketCameraMode);
+  const rocketCameraTarget = useStore((s) => s.rocketCameraTarget);
+  const setRocketCameraTarget = useStore((s) => s.setRocketCameraTarget);
 
   const key = useKey();
   const euler = useMemo(() => new Euler(0, 0, 0, "YXZ"), []);
@@ -160,8 +167,25 @@ export default function Rocket() {
       anyInput = true;
     }
 
-    boosting.current = key.down("Space") && (thrust >= 0 || vel.current >= 0);
-    anyInput = anyInput || key.down("Space");
+    // 스페이스바: 로켓 시점으로 돌아가기 또는 부스트
+    if (key.down("Space")) {
+      if (rocketCameraMode === "planet_view") {
+        // 행성 뷰 모드에서 스페이스바: 로켓 시점으로 돌아가기
+        setRocketCameraMode("follow");
+        setRocketCameraTarget(undefined);
+        setFlyToTarget(undefined);
+        setFollowRocket(true);
+        setIsCameraMoving(false);
+        console.log("로켓 시점으로 돌아갑니다");
+        anyInput = true;
+      } else {
+        // 일반 모드에서 스페이스바: 부스트
+        boosting.current = thrust >= 0 || vel.current >= 0;
+        anyInput = true;
+      }
+    } else {
+      boosting.current = false;
+    }
 
     if (key.down("ArrowUp")) {
       euler.x += PITCH_RATE * dt;
@@ -219,12 +243,25 @@ export default function Rocket() {
     const controls = controlsRef.current;
     if (!controls) return;
 
-    if (followRocket) {
+    if (rocketCameraMode === "follow" && followRocket) {
+      // 로켓 추적 모드
       const lookPoint = g.position
         .clone()
         .add(fwd.clone().multiplyScalar(TPV_LOOK_AHEAD));
       controls.target.lerp(lookPoint, TARGET_LERP);
-    } else {
+    } else if (rocketCameraMode === "planet_view" && rocketCameraTarget) {
+      // 행성 뷰 모드 - 로켓 위치에서 행성을 바라봄
+      const planetPos = bodyPositions[rocketCameraTarget];
+      if (planetPos) {
+        const planetVector = new Vector3(
+          planetPos[0],
+          planetPos[1],
+          planetPos[2]
+        );
+        controls.target.lerp(planetVector, TARGET_LERP);
+      }
+    } else if (!followRocket && flyToTargetRaw) {
+      // 기존 행성 포커스 모드
       const v = resolveFlyToVec3(flyToTargetRaw);
       if (v) {
         const planetPos = new Vector3(v[0], v[1], v[2]);
@@ -236,7 +273,14 @@ export default function Rocket() {
   useFrame((_, dt) => {
     if (!rocketAlive || !spawned || !visible) return;
 
-    // 행성 포커스 중에는 로켓 움직임을 멈추고(원하면 제거 가능), 카메라만 타겟을 따라간다.
+    // 행성 뷰 모드에서는 로켓 움직임을 멈추고 카메라만 타겟을 따라간다
+    if (rocketCameraMode === "planet_view") {
+      vel.current = 0;
+      updateKinematics(dt);
+      return;
+    }
+
+    // 기존 행성 포커스 모드
     if (!followRocket && flyToTargetRaw) {
       vel.current = 0;
       updateKinematics(dt);

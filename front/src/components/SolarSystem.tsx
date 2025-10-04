@@ -367,6 +367,13 @@ export default function SolarSystem({
 
             console.log("SolarSystem - Starting camera movement");
             setIsCameraMoving(true);
+
+            // 로켓 카메라 모드로 전환
+            const { setRocketCameraMode, setRocketCameraTarget } =
+              useStore.getState();
+            setRocketCameraMode("planet_view");
+            setRocketCameraTarget(planet.id);
+            console.log("로켓 카메라 모드로 전환:", planet.name);
             const g = planetRefs.current[p.id];
             if (!g) return;
 

@@ -155,6 +155,13 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       console.log("Starting flyToPlanet for:", p.name);
       setIsCameraMoving(true);
 
+      // 로켓 카메라 모드로 전환
+      const { setRocketCameraMode, setRocketCameraTarget } =
+        useStore.getState();
+      setRocketCameraMode("planet_view");
+      setRocketCameraTarget(p.id);
+      console.log("로켓 카메라 모드로 전환:", p.name);
+
       // 카메라 거리는 반경 비례로 잡아줌
       const [x, y, z] = sph2cart(p.ra, p.dec, radius + SURFACE_OFFSET);
       const len = Math.hypot(x, y, z) || 1;

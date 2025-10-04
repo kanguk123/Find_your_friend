@@ -193,11 +193,26 @@ export default function Scene() {
         return;
       }
 
-      // Player 모드에서 스페이스바로 선택 해제
+      // Player 모드에서 스페이스바 처리
       if (mode === "player" && e.code === "Space") {
         e.preventDefault();
-        setSelectedId(undefined);
-        setFlyToTarget(undefined);
+
+        // 로켓 카메라 모드 상태 확인
+        const { rocketCameraMode, setRocketCameraMode, setRocketCameraTarget } =
+          useStore.getState();
+
+        if (rocketCameraMode === "planet_view") {
+          // 행성 뷰 모드에서 스페이스바: 로켓 시점으로 돌아가기
+          setRocketCameraMode("follow");
+          setRocketCameraTarget(undefined);
+          setFlyToTarget(undefined);
+          setSelectedId(undefined);
+          console.log("Scene: 로켓 시점으로 돌아갑니다");
+        } else {
+          // 일반 모드에서 스페이스바: 선택 해제
+          setSelectedId(undefined);
+          setFlyToTarget(undefined);
+        }
         return;
       }
 
