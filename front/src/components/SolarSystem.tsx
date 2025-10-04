@@ -23,7 +23,15 @@ function renderRadius(body: Body) {
   return body.id === "sun" ? body.radius : body.radius * GLOBAL_PLANET_SCALE;
 }
 
-function PlanetMesh({ body, texUrl }: { body: Body; texUrl?: string }) {
+function PlanetMesh({
+  body,
+  texUrl,
+  isCameraMovingToThis,
+}: {
+  body: Body;
+  texUrl?: string;
+  isCameraMovingToThis?: boolean;
+}) {
   const textures = useSolarTextures();
   const tex = texUrl ? textures.get(texUrl) : undefined;
   const hasTex = !!tex;
@@ -67,8 +75,14 @@ function PlanetMesh({ body, texUrl }: { body: Body; texUrl?: string }) {
             : body.color
         }
         emissiveIntensity={
-          visualState.isSelected
-            ? 0.8
+          visualState.isSelected && isCameraMovingToThis
+            ? hasTex
+              ? 1.2
+              : 2.0
+            : visualState.isSelected
+            ? hasTex
+              ? 0.5
+              : 1.0
             : visualState.isOtherSelected
             ? 0.0
             : hasTex
@@ -120,11 +134,31 @@ function SunCore() {
     <group
       onClick={(e) => {
         e.stopPropagation();
-        // 같은 태양을 다시 클릭하면 카메라 이동하지 않음
-        const currentSelectedId = useStore.getState().selectedId;
-        if (currentSelectedId === SUN.id) return;
 
-        setSelectedId(SUN.id);
+        const clickHandler = new SolarPlanetClickHandler();
+        const planet = {
+          id: SUN.id,
+          name: SUN.name,
+          score: SUN.score,
+          features: {
+            mass: SUN.radius * 10,
+            radius: SUN.radius,
+            orbital_period: undefined,
+            stellar_flux: 1.0,
+          },
+        };
+
+        const currentSelectedId = useStore.getState().selectedId;
+        if (currentSelectedId !== planet.id) {
+          clickHandler.handleClick(planet);
+          return;
+        }
+
+        if (useStore.getState().isCameraMoving) {
+          return;
+        }
+
+        useStore.getState().setIsCameraMoving(true);
         // 태양은 중심에 있으므로 적당한 거리에서 보기
         setFlyToTarget([0, 0, 4]);
         setFollowRocket(false);
@@ -164,12 +198,14 @@ export default function SolarSystem({
   const planetRefs = useRef<Record<string, Group>>({});
   const {
     threshold,
+    selectedId,
     setSelectedId,
     setFlyToTarget,
     setBodyPositions,
     setFollowRocket,
     isCameraMoving,
     setIsCameraMoving,
+    flyToTarget,
   } = useStore();
 
   const cut = threshold / 100;
@@ -225,6 +261,46 @@ export default function SolarSystem({
     <group>
       {/* 태양 */}
       <SunCore />
+
+      {/* 선택된 행성으로 카메라 이동 시 추가 조명 */}
+      {selectedId &&
+        selectedId !== SUN.id &&
+        planetRefs.current[selectedId] &&
+        (isCameraMoving || flyToTarget) && (
+          <>
+            {/* 메인 포인트 라이트 - 행성 위치에서 */}
+            <pointLight
+              position={planetRefs.current[selectedId].position}
+              intensity={8}
+              distance={12}
+              decay={0.5}
+              color="#ffffff"
+            />
+            {/* 보조 포인트 라이트 - 행성에서 약간 떨어진 위치 */}
+            <pointLight
+              position={[
+                planetRefs.current[selectedId].position.x + 2,
+                planetRefs.current[selectedId].position.y + 1,
+                planetRefs.current[selectedId].position.z + 2,
+              ]}
+              intensity={4}
+              distance={10}
+              decay={0.8}
+              color="#ffffff"
+            />
+            {/* 방향성 조명 - 태양 반대편에서 */}
+            <directionalLight
+              position={[
+                planetRefs.current[selectedId].position.x - 5,
+                planetRefs.current[selectedId].position.y + 3,
+                planetRefs.current[selectedId].position.z - 5,
+              ]}
+              intensity={2}
+              color="#ffffff"
+              target={planetRefs.current[selectedId]}
+            />
+          </>
+        )}
 
       {/* 궤도선 */}
       {planets.map((p) => (
@@ -312,7 +388,13 @@ export default function SolarSystem({
             document.body.style.cursor = "default";
           }}
         >
-          <PlanetMesh body={p} texUrl={p.texture} />
+          <PlanetMesh
+            body={p}
+            texUrl={p.texture}
+            isCameraMovingToThis={
+              selectedId === p.id && (isCameraMoving || flyToTarget)
+            }
+          />
           {p.ring && <SaturnRing body={p} />}
         </group>
       ))}

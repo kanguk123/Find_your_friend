@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useStore, type Planet } from "@/state/useStore";
+import { useStore, type Planet, type Vec3 } from "@/state/useStore";
 import { SUN, PLANETS } from "@/data/solar";
 import {
   SolarPlanetClickHandler,
@@ -118,12 +118,6 @@ export default function PlanetListPanel() {
 
     // 태양계 행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
     if (planet.ra === undefined || planet.dec === undefined) {
-      // 태양의 경우 특별 처리 - SolarSystem.tsx와 동일한 로직
-      if (planet.id === "sun") {
-        clickHandler.moveCamera(planet);
-        return;
-      }
-
       // 다른 태양계 행성의 경우 - SolarSystem.tsx와 동일한 로직 사용
       const solarPlanet = PLANETS.find((p) => p.id === planet.id) || SUN;
       const orbitRadius = solarPlanet.orbitRadius || 0;
@@ -165,6 +159,22 @@ export default function PlanetListPanel() {
       setFlyToTarget([camX, camY, camZ]);
     } else {
       // 외계행성의 경우 - ExoplanetPoints.tsx와 동일한 로직 사용
+      if (!planet.ra || !planet.dec) {
+        console.warn("외계행성 데이터가 불완전합니다:", planet);
+        return;
+      }
+
+      // 외계행성 데이터가 유효한지 추가 검증
+      if (
+        typeof planet.ra !== "number" ||
+        typeof planet.dec !== "number" ||
+        isNaN(planet.ra) ||
+        isNaN(planet.dec)
+      ) {
+        console.warn("외계행성 좌표 데이터가 유효하지 않습니다:", planet);
+        return;
+      }
+
       const phi = (planet.ra * Math.PI) / 180;
       const theta = (planet.dec * Math.PI) / 180;
       const radius = 30;
@@ -175,6 +185,17 @@ export default function PlanetListPanel() {
       const len = Math.hypot(x, y, z) || 1;
       const n = [x / len, y / len, z / len];
       const dist = radius * 1.2; // 외계행성은 작으므로 더 멀리서 관찰
+
+      // bodyPositions에 외계행성 위치 저장 (Scene.tsx에서 사용)
+      const { setBodyPositions, bodyPositions } = useStore.getState();
+      const newPositions = {
+        ...bodyPositions,
+        [planet.id]: [x, y, z] as Vec3,
+      };
+      setBodyPositions(newPositions);
+
+      // 즉시 bodyPositions 업데이트 후 카메라 이동
+      useStore.setState({ bodyPositions: newPositions });
       setFlyToTarget([n[0] * dist, n[1] * dist, n[2] * dist]);
     }
 
