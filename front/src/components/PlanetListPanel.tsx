@@ -57,9 +57,9 @@ export default function PlanetListPanel() {
       })),
     ];
 
-    // 외계행성 데이터 로드 - 백엔드 API 사용
+    // 외계행성 데이터 로드 - 백엔드 API 사용 (500개)
     import("../services/api")
-      .then(({ ApiService }) => ApiService.getPlanets())
+      .then(({ ApiService }) => ApiService.getPlanets(1, 500))
       .then((response) => {
         if (response.success && response.data) {
           const exoplanets: Planet[] = response.data.map((p: any) => ({

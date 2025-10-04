@@ -50,8 +50,8 @@ export class ApiService {
   /**
    * 모든 행성 데이터를 가져옵니다
    */
-  static async getPlanets(): Promise<ApiResponse<PlanetData[]>> {
-    return this.request<ApiResponse<PlanetData[]>>("/planets");
+  static async getPlanets(page: number = 1, pageSize: number = 50): Promise<ApiResponse<PlanetData[]>> {
+    return this.request<ApiResponse<PlanetData[]>>(`/planets?page=${page}&page_size=${pageSize}`);
   }
 
   /**

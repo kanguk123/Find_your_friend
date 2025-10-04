@@ -56,7 +56,7 @@ export default function ExoplanetPointsAPI() {
     const loadPlanets = async () => {
       try {
         setLoading(true);
-        const response = await ApiService.getPlanets();
+        const response = await ApiService.getPlanets(1, 500);
 
         if (response.success) {
           setPlanets(response.data);
@@ -182,36 +182,33 @@ export default function ExoplanetPointsAPI() {
     }
   };
 
-  if (loading) {
-    return (
-      <mesh>
-        <sphereGeometry args={[0.1, 8, 8]} />
-        <meshBasicMaterial color="yellow" />
-      </mesh>
-    );
+  // 로딩 중이거나 에러가 있거나 데이터가 없으면 렌더링하지 않음
+  if (loading || error || planets.length === 0) {
+    return null;
   }
-
-  if (error) {
-    return (
-      <mesh>
-        <sphereGeometry args={[0.1, 8, 8]} />
-        <meshBasicMaterial color="red" />
-      </mesh>
-    );
-  }
-
-  if (planets.length === 0) return null;
 
   return (
     <group>
       {planets.map((planet) => {
-        let color = "#ff0000";
-        if (planet.disposition === "CONFIRMED") color = "#00ff00";
-        else if (planet.disposition === "CANDIDATE") color = "#ffff00";
-        else if (planet.disposition === "FALSE POSITIVE") color = "#ff0000";
+        // AI probability에 따른 히트맵 색상 (낮음: 노란색 -> 중간: 초록색 -> 높음: 빨간색)
+        // n/a는 가장 낮은 확률(0)로 처리
+        const probability = planet.ai_probability ?? 0;
+        let r, g, b;
+        if (probability < 0.5) {
+          // 0-0.5: 노란색 -> 초록색
+          r = Math.floor(255 * (1 - probability * 2));
+          g = 255;
+          b = 0;
+        } else {
+          // 0.5-1: 초록색 -> 빨간색
+          r = Math.floor(255 * (probability - 0.5) * 2);
+          g = Math.floor(255 * (1 - (probability - 0.5) * 2));
+          b = 0;
+        }
+        const color = `rgb(${r}, ${g}, ${b})`;
 
         const isSelected = selectedId === `exo-${planet.id}`;
-        const size = EARTH_RENDER_SIZE;
+        const size = EARTH_RENDER_SIZE * 4; // 외계 행성 크기 4배
 
         return (
           <group key={planet.id}>

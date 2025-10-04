@@ -78,7 +78,11 @@ export default function PlanetCard({ planet, planetData, onClose }: Props) {
         <div className="mb-4">
           <div className="flex items-baseline gap-2 mb-1">
             <span className="text-2xl font-bold text-blue-400">
-              {planet.score ? (planet.score * 100).toFixed(1) : "N/A"}
+              {isExoplanet && planetData
+                ? ((planetData.ai_probability ?? 0) * 100).toFixed(1)
+                : planet.score
+                ? (planet.score * 100).toFixed(1)
+                : "N/A"}
             </span>
             <span className="text-sm text-white/70">%</span>
           </div>
@@ -88,7 +92,13 @@ export default function PlanetCard({ planet, planetData, onClose }: Props) {
           <div className="mt-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all"
-              style={{ width: `${(planet.score || 0) * 100}%` }}
+              style={{
+                width: `${
+                  isExoplanet && planetData
+                    ? (planetData.ai_probability ?? 0) * 100
+                    : (planet.score || 0) * 100
+                }%`,
+              }}
             />
           </div>
         </div>
