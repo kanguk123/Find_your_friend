@@ -45,6 +45,8 @@ function CameraRig() {
     mode,
     selectedId,
     bodyPositions,
+    isCameraMoving,
+    setIsCameraMoving,
   } = useStore();
 
   useFrame(() => {
@@ -140,6 +142,7 @@ function CameraRig() {
       if (distance < threshold) {
         camera.position.set(tx, ty, tz);
         setFlyToTarget(undefined);
+        setIsCameraMoving(false);
         console.log("Arrived at target:", selectedId, "distance:", distance);
       }
     } else if (mode === "expert" && controls) {
@@ -225,6 +228,7 @@ function CameraRig() {
 
         orbitControls.update();
         setFlyToTarget(undefined);
+        setIsCameraMoving(false);
         console.log(
           "Arrived at target (Expert mode):",
           selectedId,
