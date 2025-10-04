@@ -54,9 +54,9 @@ function CameraRig() {
       const target = (controls as unknown as { target: Vector3 }).target;
       const cameraPos = camera.position;
 
-      // Expert 모드에서는 선택된 행성을 중심으로 카메라 이동
+      // Player 모드와 Expert 모드 모두에서 선택된 행성을 중심으로 카메라 이동
       let centerPoint = new Vector3(0, 0, 0); // 기본 중심점 (태양)
-      if (mode === "expert" && selectedId && bodyPositions[selectedId]) {
+      if (selectedId && bodyPositions[selectedId]) {
         const [px, py, pz] = bodyPositions[selectedId];
         centerPoint.set(px, py, pz);
       }
@@ -70,17 +70,13 @@ function CameraRig() {
       if (keysPressed["w"] || keysPressed["arrowup"]) {
         direction.normalize().multiplyScalar(moveSpeed);
         camera.position.add(direction);
-        if (mode === "expert") {
-          target.add(direction);
-        }
+        target.add(direction);
         shouldUpdate = true;
       }
       if (keysPressed["s"] || keysPressed["arrowdown"]) {
         direction.normalize().multiplyScalar(-moveSpeed);
         camera.position.add(direction);
-        if (mode === "expert") {
-          target.add(direction);
-        }
+        target.add(direction);
         shouldUpdate = true;
       }
 
@@ -90,9 +86,7 @@ function CameraRig() {
         const right = new Vector3().crossVectors(direction, up).normalize();
         right.multiplyScalar(moveSpeed);
         camera.position.add(right);
-        if (mode === "expert") {
-          target.add(right);
-        }
+        target.add(right);
         shouldUpdate = true;
       }
       if (keysPressed["d"] || keysPressed["arrowright"]) {
@@ -100,9 +94,7 @@ function CameraRig() {
         const right = new Vector3().crossVectors(direction, up).normalize();
         right.multiplyScalar(-moveSpeed);
         camera.position.add(right);
-        if (mode === "expert") {
-          target.add(right);
-        }
+        target.add(right);
         shouldUpdate = true;
       }
 
@@ -127,26 +119,7 @@ function CameraRig() {
     cur.y += (ty - cur.y) * moveSpeed;
     cur.z += (tz - cur.z) * moveSpeed;
 
-    if (mode === "player") {
-      // Player 모드: 선택된 행성을 바라봄
-      if (selectedId && bodyPositions[selectedId]) {
-        const [px, py, pz] = bodyPositions[selectedId];
-        camera.lookAt(px, py, pz);
-      } else {
-        camera.lookAt(0, 0, 0);
-      }
-
-      // 도착 확인 (외계행성은 더 큰 임계값 사용)
-      const distance = Math.hypot(cur.x - tx, cur.y - ty, cur.z - tz);
-      const threshold = selectedId && bodyPositions[selectedId] ? 2.0 : 0.1; // 외계행성은 2.0, 태양계 행성은 0.1
-
-      if (distance < threshold) {
-        camera.position.set(tx, ty, tz);
-        setFlyToTarget(undefined);
-        setIsCameraMoving(false);
-        console.log("Arrived at target:", selectedId, "distance:", distance);
-      }
-    } else if (mode === "expert" && controls) {
+    if ((mode === "player" || mode === "expert") && controls) {
       // Expert 모드: OrbitControls 타겟을 행성으로 설정
       const orbitControls = controls as unknown as {
         target: Vector3;
@@ -162,57 +135,6 @@ function CameraRig() {
       }
 
       orbitControls.update();
-
-      // Expert 모드에서 WASD 키보드로 카메라 이동 (Player 모드와 동일)
-      if (!flyToTarget) {
-        const moveSpeed = 0.05; // Player 모드와 동일한 이동 속도
-
-        const target = orbitControls.target;
-        const cameraPos = camera.position;
-
-        // 카메라에서 타겟으로의 방향 벡터
-        const direction = new Vector3().subVectors(target, cameraPos);
-        const distance = direction.length();
-
-        let shouldUpdate = false;
-
-        // W/S: 앞뒤 이동
-        if (keysPressed["w"] || keysPressed["arrowup"]) {
-          direction.normalize().multiplyScalar(moveSpeed);
-          camera.position.add(direction);
-          target.add(direction);
-          shouldUpdate = true;
-        }
-        if (keysPressed["s"] || keysPressed["arrowdown"]) {
-          direction.normalize().multiplyScalar(-moveSpeed);
-          camera.position.add(direction);
-          target.add(direction);
-          shouldUpdate = true;
-        }
-
-        // A/D: 좌우 이동
-        if (keysPressed["a"] || keysPressed["arrowleft"]) {
-          const up = new Vector3(0, 1, 0);
-          const right = new Vector3().crossVectors(direction, up).normalize();
-          right.multiplyScalar(moveSpeed);
-          camera.position.add(right);
-          target.add(right);
-          shouldUpdate = true;
-        }
-        if (keysPressed["d"] || keysPressed["arrowright"]) {
-          const up = new Vector3(0, 1, 0);
-          const right = new Vector3().crossVectors(direction, up).normalize();
-          right.multiplyScalar(-moveSpeed);
-          camera.position.add(right);
-          target.add(right);
-          shouldUpdate = true;
-        }
-
-        // 키 입력이 있을 때만 컨트롤 업데이트
-        if (shouldUpdate) {
-          orbitControls.update();
-        }
-      }
 
       // 도착 확인 (외계행성은 더 큰 임계값 사용)
       const distance = Math.hypot(cur.x - tx, cur.y - ty, cur.z - tz);
@@ -390,8 +312,23 @@ export default function Scene() {
         </div>
       )}
 
-      {/* Player 모드 전용 - 좌하단 게임 HUD */}
-      {mode === "player" && <GameHUD />}
+      {/* Player 모드 - Expert 패널들 + 게임 HUD */}
+      {mode === "player" && (
+        <>
+          {/* Expert 패널들 - 우측 상단 */}
+          <div className="pointer-events-none absolute top-16 right-3 z-50 w-80 space-y-3 max-h-[calc(100vh-16rem)] overflow-y-auto">
+            <div className="pointer-events-auto">
+              <HyperparameterPanel />
+            </div>
+            <div className="pointer-events-auto">
+              <ModelAccuracy />
+            </div>
+          </div>
+
+          {/* 게임 HUD - 좌하단 */}
+          <GameHUD />
+        </>
+      )}
 
       {/* Data Training 버튼 - 하단 중앙 */}
       <div className="pointer-events-none absolute bottom-3 left-1/2 transform -translate-x-1/2 z-50">

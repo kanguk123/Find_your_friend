@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Group } from "three";
 import { useFrame } from "@react-three/fiber";
 import { useStore, type Planet } from "@/state/useStore";
+import { ExoplanetClickHandler } from "@/utils/PlanetClickHandler";
 
 interface OuterPlanet {
   id: string;
@@ -74,39 +75,35 @@ export default function OuterSystemPlanets() {
     setBodyPositions(positions);
   });
 
-  const handleDoubleClick = (planet: OuterPlanet) => {
+  const handlePlanetClick = (planet: OuterPlanet) => {
     const g = planetRefs.current[planet.id];
     if (!g) return;
 
-    setSelectedId(planet.id);
+    // OuterPlanet을 Planet 타입으로 변환
+    const planetData: Planet = {
+      id: planet.id,
+      name: planet.name,
+      ra: Math.random() * 360, // 랜덤 적경 (OuterPlanet에는 ra/dec가 없으므로)
+      dec: (Math.random() - 0.5) * 180, // 랜덤 적위
+      score: 0.3 + Math.random() * 0.6, // 랜덤 점수
+      features: {
+        mass: planet.radius * 10,
+        radius: planet.radius,
+        orbital_period: 100 + Math.random() * 1000,
+        stellar_flux: 0.1 + Math.random() * 2,
+      },
+    };
 
-    // 행성 크기에 따라 카메라 거리 조정
-    const planetRadius = planet.radius;
-    const cameraDistance = Math.max(planetRadius * 15, 2); // 최소 2 단위 거리 보장
+    // 통합된 클릭 핸들러 사용
+    const clickHandler = new ExoplanetClickHandler();
+    const position: [number, number, number] = [
+      g.position.x,
+      g.position.y,
+      g.position.z,
+    ];
+    clickHandler.handleClick(planetData, position);
 
-    // 태양(0, 0, 0)에서 행성으로 향하는 방향 벡터 계산
-    const dirX = g.position.x;
-    const dirZ = g.position.z;
-    const len = Math.hypot(dirX, dirZ) || 1;
-    const normalX = dirX / len;
-    const normalZ = dirZ / len;
-
-    // 수직 벡터 (행성에서 태양 쪽으로 향하는 선에 수직)
-    const perpX = -normalZ;
-    const perpZ = normalX;
-
-    // 카메라 위치 계산: 행성 위치에서 태양 반대편, 약간 옆으로 비켜서
-    const camX =
-      g.position.x -
-      normalX * cameraDistance * 0.4 +
-      perpX * cameraDistance * 0.6;
-    const camY = g.position.y + cameraDistance * 0.5; // 위쪽에서 내려다보는 각도
-    const camZ =
-      g.position.z -
-      normalZ * cameraDistance * 0.4 +
-      perpZ * cameraDistance * 0.6;
-
-    setFlyToTarget([camX, camY, camZ]);
+    // 로켓 추적 해제
     setFollowRocket(false);
   };
 
@@ -121,11 +118,7 @@ export default function OuterSystemPlanets() {
           position={planet.position}
           onClick={(e) => {
             e.stopPropagation();
-            setSelectedId(planet.id);
-          }}
-          onDoubleClick={(e) => {
-            e.stopPropagation();
-            handleDoubleClick(planet);
+            handlePlanetClick(planet);
           }}
           onPointerOver={(e) => {
             e.stopPropagation();
