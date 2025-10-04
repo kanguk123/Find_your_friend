@@ -26,6 +26,26 @@ import { useStore } from "@/state/useStore";
 // 키 입력 상태 관리
 const keysPressed: Record<string, boolean> = {};
 
+function CameraLight() {
+  const { camera } = useThree();
+  const lightRef = useRef<any>();
+
+  useFrame(() => {
+    if (lightRef.current) {
+      // 조명을 카메라 위치에 배치
+      lightRef.current.position.copy(camera.position);
+    }
+  });
+
+  return (
+    <directionalLight
+      ref={lightRef}
+      intensity={1.5}
+      color="#ffffff"
+    />
+  );
+}
+
 function CameraRig() {
   const { camera, controls } = useThree();
   const { flyToTarget, setFlyToTarget, followRocket, mode, selectedId, bodyPositions } = useStore();
@@ -190,18 +210,18 @@ export default function Scene() {
         </div>
       </div>
 
-      {/* 상단 UI */}
+      {/* 좌측 상단 - Search planets & Favorites */}
+      <div className="pointer-events-none absolute top-16 left-3 z-50 w-80 space-y-3">
+        <div className="pointer-events-auto">
+          <SolarSearchSidebar />
+        </div>
+        <FavoriteFilter />
+      </div>
+
+      {/* 상단 중앙 UI */}
       <div className="pointer-events-none absolute top-16 left-0 right-0 z-50 flex flex-col items-center gap-2 px-4">
-        <div className="pointer-events-auto max-w-6xl w-full flex items-start gap-4">
-          <div className="w-[28rem]">
-            <SolarSearchSidebar />
-          </div>
-          <div className="w-[24rem]">
-            <ScoreSidebar />
-          </div>
-          <div className="flex-1 flex justify-end">
-            <FavoriteFilter />
-          </div>
+        <div className="pointer-events-auto">
+          <ScoreSidebar />
         </div>
 
         <div className="pointer-events-auto flex gap-2">
@@ -216,11 +236,17 @@ export default function Scene() {
         </div>
       </div>
 
-      {/* 우측 상단 HUD */}
-      <div className="pointer-events-none absolute top-3 right-3 z-50 space-y-3">
+      {/* 좌측 하단 - Planet 정보 */}
+      <div className="pointer-events-none absolute bottom-3 left-3 z-50 space-y-3">
         <div className="pointer-events-auto bg-black/60 border border-white/15 rounded-xl p-3 backdrop-blur-sm">
           <InfoPanel />
         </div>
+        {/* ESC 키 안내 - 행성이 선택되었을 때만 표시 */}
+        {selectedId && (
+          <div className="pointer-events-none bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 backdrop-blur-sm text-white text-xs sm:text-sm text-center">
+            Press <kbd className="px-1.5 py-0.5 bg-white/20 rounded border border-white/30 font-mono text-[10px] sm:text-xs">ESC</kbd> to release camera
+          </div>
+        )}
       </div>
 
       {/* Expert 모드 전용 패널들 - 우측 하단 */}
