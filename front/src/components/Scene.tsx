@@ -17,6 +17,7 @@ import HyperparameterPanel from "./HyperparameterPanel";
 import ModelAccuracy from "./ModelAccuracy";
 import ExoplanetPoints from "./ExoplanetPoints";
 import PlanetListPanel from "./PlanetListPanel";
+import PlanetCard from "./PlanetCard";
 import { FloatingTextManager } from "./FloatingCoinText";
 import { useStore } from "@/state/useStore";
 
@@ -59,9 +60,13 @@ function CameraRig() {
         }
       };
 
-      controls.addEventListener("start", onStart);
+      const orbitControls = controls as {
+        addEventListener: (event: string, callback: () => void) => void;
+        removeEventListener: (event: string, callback: () => void) => void;
+      };
+      orbitControls.addEventListener("start", onStart);
       return () => {
-        controls.removeEventListener("start", onStart);
+        orbitControls.removeEventListener("start", onStart);
       };
     }
   }, [controls]);
@@ -94,14 +99,13 @@ function CameraRig() {
       const cameraPos = camera.position;
 
       // 중심점 설정 (선택된 행성 또는 태양)
-      let centerPoint = new Vector3(0, 0, 0);
+      const centerPoint = new Vector3(0, 0, 0);
       if (selectedId && bodyPositions[selectedId]) {
         const [px, py, pz] = bodyPositions[selectedId];
         centerPoint.set(px, py, pz);
       }
 
       // 키보드 입력에 따른 카메라/타겟 이동 플래그
-      let isMovingWithKeys = false;
       const moveSpeed = 0.5; // 이동 속도
 
       if (mode === "expert") {
@@ -113,19 +117,15 @@ function CameraRig() {
           // WASD로 카메라만 이동 (행성 중심 유지)
           if (keysPressed["w"] || keysPressed["arrowup"]) {
             camera.position.z += moveSpeed;
-            isMovingWithKeys = true;
           }
           if (keysPressed["s"] || keysPressed["arrowdown"]) {
             camera.position.z -= moveSpeed;
-            isMovingWithKeys = true;
           }
           if (keysPressed["a"] || keysPressed["arrowleft"]) {
             camera.position.x -= moveSpeed;
-            isMovingWithKeys = true;
           }
           if (keysPressed["d"] || keysPressed["arrowright"]) {
             camera.position.x += moveSpeed;
-            isMovingWithKeys = true;
           }
         } else {
           // 선택된 행성이 없으면 태양 중심으로
@@ -135,22 +135,18 @@ function CameraRig() {
           if (keysPressed["w"] || keysPressed["arrowup"]) {
             camera.position.z += moveSpeed;
             target.z += moveSpeed;
-            isMovingWithKeys = true;
           }
           if (keysPressed["s"] || keysPressed["arrowdown"]) {
             camera.position.z -= moveSpeed;
             target.z -= moveSpeed;
-            isMovingWithKeys = true;
           }
           if (keysPressed["a"] || keysPressed["arrowleft"]) {
             camera.position.x -= moveSpeed;
             target.x -= moveSpeed;
-            isMovingWithKeys = true;
           }
           if (keysPressed["d"] || keysPressed["arrowright"]) {
             camera.position.x += moveSpeed;
             target.x += moveSpeed;
-            isMovingWithKeys = true;
           }
         }
       } else {
@@ -163,7 +159,6 @@ function CameraRig() {
             .multiplyScalar(0.05);
           camera.position.add(direction);
           target.add(direction);
-          isMovingWithKeys = true;
         }
         if (keysPressed["s"] || keysPressed["arrowdown"]) {
           const direction = new Vector3()
@@ -172,7 +167,6 @@ function CameraRig() {
             .multiplyScalar(-0.05);
           camera.position.add(direction);
           target.add(direction);
-          isMovingWithKeys = true;
         }
 
         // A/D: 좌우 이동 (Panning)
@@ -185,7 +179,6 @@ function CameraRig() {
             .multiplyScalar(0.05);
           camera.position.add(right);
           target.add(right);
-          isMovingWithKeys = true;
         }
         if (keysPressed["d"] || keysPressed["arrowright"]) {
           const direction = new Vector3().subVectors(target, cameraPos);
@@ -196,7 +189,6 @@ function CameraRig() {
             .multiplyScalar(-0.05);
           camera.position.add(right);
           target.add(right);
-          isMovingWithKeys = true;
         }
       }
 
@@ -235,7 +227,7 @@ function CameraRig() {
         const [px, py, pz] = bodyPositions[selectedId];
 
         // 외계행성인지 확인 (planet-로 시작하면 외계행성)
-        const isExoplanet = selectedId.startsWith('planet-');
+        const isExoplanet = selectedId.startsWith("planet-");
 
         if (isExoplanet) {
           // 외계행성: 행성을 바라봄
@@ -284,10 +276,8 @@ export default function Scene() {
     mode,
     selectedId,
     setSelectedId,
-    planets,
     setFlyToTarget,
     flyToTarget,
-    bodyPositions,
     setKeysPressed,
     bumpReset,
     showPlanetCard,
@@ -296,12 +286,6 @@ export default function Scene() {
     setSelectedPlanetData,
     isCameraMoving,
   } = useStore();
-  const selectedPlanet = planets.find((p) => p.id === selectedId);
-  // 외계행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
-  const isExoplanet =
-    selectedPlanet &&
-    selectedPlanet.ra !== undefined &&
-    selectedPlanet.dec !== undefined;
 
   // 키보드 입력 처리
   useEffect(() => {
@@ -317,7 +301,10 @@ export default function Scene() {
         if (flyToTarget || isCameraMoving) {
           setFlyToTarget(undefined);
           setIsCameraMoving(false);
-          console.log("ESC 1단계: 카메라 해제", { flyToTarget, isCameraMoving });
+          console.log("ESC 1단계: 카메라 해제", {
+            flyToTarget,
+            isCameraMoving,
+          });
           return;
         }
 
@@ -397,7 +384,17 @@ export default function Scene() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [setFlyToTarget, setSelectedId, setKeysPressed, flyToTarget, isCameraMoving, selectedId, mode, setShowPlanetCard, setSelectedPlanetData]);
+  }, [
+    setFlyToTarget,
+    setSelectedId,
+    setKeysPressed,
+    flyToTarget,
+    isCameraMoving,
+    selectedId,
+    mode,
+    setShowPlanetCard,
+    setSelectedPlanetData,
+  ]);
 
   return (
     <div className="relative h-screen w-full">
@@ -426,12 +423,12 @@ export default function Scene() {
           <PlanetListPanel />
         </div>
         <div className="pointer-events-auto relative z-30 mt-2">
-            <button
-                onClick={() => bumpReset()}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-black/60 border border-white/15 hover:bg-white/10 whitespace-nowrap"
-            >
-                Reset to Earth
-            </button>
+          <button
+            onClick={() => bumpReset()}
+            className="w-full px-3 py-2 text-sm rounded-lg bg-black/60 border border-white/15 hover:bg-white/10 whitespace-nowrap"
+          >
+            Reset to Earth
+          </button>
         </div>
       </div>
 
@@ -465,10 +462,21 @@ export default function Scene() {
             <kbd className="px-1.5 py-0.5 bg-white/20 rounded border border-white/30 font-mono text-[10px] sm:text-xs">
               ESC
             </kbd>{" "}
-            to {flyToTarget || isCameraMoving ? "release camera" : "deselect planet"}
+            to{" "}
+            {flyToTarget || isCameraMoving
+              ? "release camera"
+              : "deselect planet"}
           </div>
         )}
       </div>
+
+      {/* Planet 정보 카드 - 행성 재선택 시 표시 */}
+      {showPlanetCard && selectedPlanetData && (
+        <PlanetCard
+          planet={selectedPlanetData}
+          onClose={() => setShowPlanetCard(false)}
+        />
+      )}
 
       {/* Expert 모드 전용 패널들 - 우측 상단 */}
       {mode === "expert" && (
