@@ -1,8 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useStore, type Planet } from "@/state/useStore";
+import { useStore, type Planet, type Vec3 } from "@/state/useStore";
 import { SUN, PLANETS } from "@/data/solar";
+import {
+  SolarPlanetClickHandler,
+  ExoplanetClickHandler,
+} from "@/utils/PlanetClickHandler";
 
 export default function PlanetListPanel() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -11,9 +15,16 @@ export default function PlanetListPanel() {
     selectedId,
     setSelectedId,
     setFlyToTarget,
+    setFollowRocket,
+    isCameraMoving,
+    setIsCameraMoving,
     threshold,
     showOnlyFavorites,
     favorites,
+    setPlanets: setStorePlanets,
+    bodyPositions,
+    mode,
+    rocketPosition,
   } = useStore();
 
   // 태양계 행성과 외계행성 데이터 로드
@@ -59,12 +70,15 @@ export default function PlanetListPanel() {
         }));
 
         // 태양계 행성과 외계행성 합치기
-        setPlanets([...solarSystemPlanets, ...exoplanets]);
+        const allPlanets = [...solarSystemPlanets, ...exoplanets];
+        setPlanets(allPlanets);
+        setStorePlanets(allPlanets); // store에도 업데이트
       })
       .catch((err) => {
         console.error("Failed to load exoplanet data:", err);
         // 외계행성 로드 실패 시 태양계 행성만 표시
         setPlanets(solarSystemPlanets);
+        setStorePlanets(solarSystemPlanets); // store에도 업데이트
       });
   }, []);
 
@@ -84,36 +98,205 @@ export default function PlanetListPanel() {
 
   // 행성 클릭 핸들러
   const handlePlanetClick = (planet: Planet) => {
-    setSelectedId(planet.id);
+    // 태양계 행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
+    const isSolarSystem = planet.ra === undefined || planet.dec === undefined;
+    const clickHandler = isSolarSystem
+      ? new SolarPlanetClickHandler()
+      : new ExoplanetClickHandler();
 
-    // 태양계 행성인지 확인 (ra, dec가 없으면 태양계 행성)
-    if (!planet.ra || !planet.dec) {
-      // 태양계 행성의 경우 태양을 중심으로 한 위치 계산
-      const solarPlanet = PLANETS.find((p) => p.id === planet.id) || SUN;
-      const orbitRadius = solarPlanet.orbitRadius || 0;
-      const angle = Math.random() * Math.PI * 2; // 랜덤 각도
-      const x = orbitRadius * Math.cos(angle);
-      const y = 0;
-      const z = orbitRadius * Math.sin(angle);
+    // 첫 번째 클릭: 행성 선택 (하이라이트)
+    const currentSelectedId = useStore.getState().selectedId;
+    console.log(
+      "PlanetList click - currentSelectedId:",
+      currentSelectedId,
+      "planet.id:",
+      planet.id
+    );
 
-      const len = Math.hypot(x, y, z) || 1;
-      const n = [x / len, y / len, z / len];
-      const dist = Math.max(orbitRadius * 0.3, 2); // 궤도 반지름의 30% 또는 최소 2
-      setFlyToTarget([n[0] * dist, n[1] * dist, n[2] * dist]);
+    if (currentSelectedId !== planet.id) {
+      console.log("PlanetList - First click: selecting planet only");
+      clickHandler.handleClick(planet);
+      return; // 첫 번째 클릭에서는 카메라 이동 없이 종료
+    }
+
+    // 두 번째 클릭: 카메라 이동 (이미 선택된 행성을 다시 클릭)
+    console.log("PlanetList - Second click: camera movement");
+    if (isCameraMoving) {
+      console.log("PlanetList - Camera already moving, ignoring");
+      // 이미 카메라가 이동 중이면 무시
+      return;
+    }
+
+    console.log("PlanetList - Starting camera movement");
+    setIsCameraMoving(true);
+
+    // 태양계 행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
+    if (planet.ra === undefined || planet.dec === undefined) {
+      // 태양인 경우 - SolarSystem.tsx의 SunCore와 동일한 로직 사용
+      if (planet.id === SUN.id) {
+        // 태양은 중심에 있으므로 적당한 거리에서 보기
+        setFlyToTarget([0, 0, 4]);
+      } else {
+        // 다른 태양계 행성의 경우 - bodyPositions에서 현재 위치 가져오기
+        const planetPos = bodyPositions[planet.id];
+        if (!planetPos) {
+          console.warn("행성 위치를 찾을 수 없습니다:", planet.id);
+          return;
+        }
+
+        const [planetX, planetY, planetZ] = planetPos;
+        const solarPlanet = PLANETS.find((p) => p.id === planet.id) || SUN;
+
+        // 행성 크기에 따라 카메라 거리 조정
+        const planetRadius = solarPlanet.radius * 0.62; // GLOBAL_PLANET_SCALE 적용
+        const cameraDistance = planetRadius * 4.5; // 더 멀리
+
+        console.log("PlanetList - Planet actual position:", [
+          planetX,
+          planetY,
+          planetZ,
+        ]);
+
+        let camX, camY, camZ;
+
+        if (mode === "player") {
+          // Player 모드: 로켓의 현재 위치를 기준으로 상대적 카메라 위치 계산
+          const [rocketX, rocketY, rocketZ] = rocketPosition;
+
+          console.log(
+            "PlanetList - Player mode - Rocket position:",
+            rocketPosition
+          );
+
+          // 로켓에서 행성으로의 방향 벡터 (정규화)
+          const dirX = planetX - rocketX;
+          const dirY = planetY - rocketY;
+          const dirZ = planetZ - rocketZ;
+          const len = Math.hypot(dirX, dirY, dirZ) || 1;
+
+          // 행성에서 로켓 방향으로 카메라 배치 (행성을 관찰)
+          camX = planetX - (dirX / len) * cameraDistance;
+          camY =
+            planetY - (dirY / len) * cameraDistance + cameraDistance * 0.15;
+          camZ = planetZ - (dirZ / len) * cameraDistance;
+
+          console.log(
+            "PlanetList - Camera target position (relative to planet):",
+            [camX, camY, camZ]
+          );
+        } else {
+          // Expert 모드: 태양을 기준으로 상대적 카메라 위치 계산
+          const dirX = planetX;
+          const dirZ = planetZ;
+          const len = Math.hypot(dirX, dirZ) || 1;
+          const normalX = dirX / len;
+          const normalZ = dirZ / len;
+
+          // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
+          camX = planetX + normalX * cameraDistance;
+          camY = planetY + cameraDistance * 0.15;
+          camZ = planetZ + normalZ * cameraDistance;
+
+          console.log(
+            "PlanetList - Camera target position (relative to planet):",
+            [camX, camY, camZ]
+          );
+        }
+
+        setFlyToTarget([camX, camY, camZ]);
+      }
     } else {
-      // 외계행성의 경우 기존 로직 사용
+      // 외계행성의 경우 - ExoplanetPoints.tsx와 동일한 로직 사용
+      if (!planet.ra || !planet.dec) {
+        console.warn("외계행성 데이터가 불완전합니다:", planet);
+        return;
+      }
+
+      // 외계행성 데이터가 유효한지 추가 검증
+      if (
+        typeof planet.ra !== "number" ||
+        typeof planet.dec !== "number" ||
+        isNaN(planet.ra) ||
+        isNaN(planet.dec)
+      ) {
+        console.warn("외계행성 좌표 데이터가 유효하지 않습니다:", planet);
+        return;
+      }
+
+      // 외계행성의 현재 위치 계산
       const phi = (planet.ra * Math.PI) / 180;
       const theta = (planet.dec * Math.PI) / 180;
       const radius = 30;
-      const x = radius * Math.cos(theta) * Math.cos(phi);
-      const y = radius * Math.sin(theta);
-      const z = radius * Math.cos(theta) * Math.sin(phi);
+      const planetX = radius * Math.cos(theta) * Math.cos(phi);
+      const planetY = radius * Math.sin(theta);
+      const planetZ = radius * Math.cos(theta) * Math.sin(phi);
 
-      const len = Math.hypot(x, y, z) || 1;
-      const n = [x / len, y / len, z / len];
-      const dist = radius * 0.5;
-      setFlyToTarget([n[0] * dist, n[1] * dist, n[2] * dist]);
+      console.log("PlanetList - Exoplanet actual position:", [
+        planetX,
+        planetY,
+        planetZ,
+      ]);
+
+      // bodyPositions에 외계행성 위치 저장 (Scene.tsx에서 사용)
+      const { setBodyPositions, bodyPositions } = useStore.getState();
+      const newPositions = {
+        ...bodyPositions,
+        [planet.id]: [planetX, planetY, planetZ] as Vec3,
+      };
+      setBodyPositions(newPositions);
+
+      // 즉시 bodyPositions 업데이트 후 카메라 이동
+      useStore.setState({ bodyPositions: newPositions });
+
+      const cameraDistance = radius * 1.2; // 외계행성은 작으므로 더 멀리서 관찰
+
+      let camX, camY, camZ;
+
+      if (mode === "player") {
+        // Player 모드: 로켓의 현재 위치를 기준으로 상대적 카메라 위치 계산
+        const [rocketX, rocketY, rocketZ] = rocketPosition;
+
+        console.log(
+          "PlanetList - Exoplanet Player mode - Rocket position:",
+          rocketPosition
+        );
+
+        // 로켓에서 외계행성으로의 방향 벡터 (정규화)
+        const dirX = planetX - rocketX;
+        const dirY = planetY - rocketY;
+        const dirZ = planetZ - rocketZ;
+        const len = Math.hypot(dirX, dirY, dirZ) || 1;
+
+        // 외계행성에서 로켓 방향으로 카메라 배치 (외계행성을 관찰)
+        camX = planetX - (dirX / len) * cameraDistance;
+        camY = planetY - (dirY / len) * cameraDistance + cameraDistance * 0.15;
+        camZ = planetZ - (dirZ / len) * cameraDistance;
+
+        console.log(
+          "PlanetList - Exoplanet Camera target position (relative to planet):",
+          [camX, camY, camZ]
+        );
+      } else {
+        // Expert 모드: 원점을 기준으로 상대적 카메라 위치 계산
+        const len = Math.hypot(planetX, planetY, planetZ) || 1;
+        const n = [planetX / len, planetY / len, planetZ / len];
+
+        // 외계행성에서 원점 방향으로 카메라 배치
+        camX = planetX - n[0] * cameraDistance;
+        camY = planetY - n[1] * cameraDistance + cameraDistance * 0.15;
+        camZ = planetZ - n[2] * cameraDistance;
+
+        console.log(
+          "PlanetList - Exoplanet Camera target position (relative to planet):",
+          [camX, camY, camZ]
+        );
+      }
+
+      setFlyToTarget([camX, camY, camZ]);
     }
+
+    // 로켓 추적 해제 (카메라가 행성으로 이동)
+    setFollowRocket(false);
   };
 
   return (
@@ -167,16 +350,30 @@ export default function PlanetListPanel() {
           ) : (
             <div className="space-y-2">
               {filteredPlanets.map((planet) => {
-                const isSolarSystem = !planet.ra || !planet.dec;
+                const isSolarSystem =
+                  planet.ra === undefined || planet.dec === undefined;
+                const clickHandler = isSolarSystem
+                  ? new SolarPlanetClickHandler()
+                  : new ExoplanetClickHandler();
+                const visualState = clickHandler.getVisualState(planet);
+                const isMoving = visualState.isSelected && isCameraMoving;
+
                 return (
                   <div
                     key={planet.id}
                     onClick={() => handlePlanetClick(planet)}
                     className={`p-3 rounded-lg cursor-pointer transition-all ${
-                      selectedId === planet.id
-                        ? "bg-purple-500/20 border border-purple-400/50"
+                      visualState.isSelected
+                        ? isMoving
+                          ? "bg-green-500/20 border border-green-400/50"
+                          : "bg-purple-500/20 border border-purple-400/50"
                         : "bg-white/5 hover:bg-white/10 border border-transparent"
                     }`}
+                    style={{
+                      opacity: visualState.isOtherSelected
+                        ? visualState.opacity
+                        : 1,
+                    }}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -186,6 +383,17 @@ export default function PlanetListPanel() {
                         {isSolarSystem && (
                           <span className="px-2 py-1 text-xs bg-blue-500/20 text-blue-300 rounded-full">
                             Solar System
+                          </span>
+                        )}
+                        {visualState.isSelected && (
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              isMoving
+                                ? "bg-green-500/20 text-green-300"
+                                : "bg-purple-500/20 text-purple-300"
+                            }`}
+                          >
+                            {isMoving ? "Moving..." : "Selected"}
                           </span>
                         )}
                       </div>

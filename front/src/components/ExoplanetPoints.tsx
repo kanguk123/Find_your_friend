@@ -2,9 +2,9 @@
 
 import { useMemo, useRef, useState, useCallback, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Instances, Instance } from "@react-three/drei";
-import { Color, Mesh } from "three";
-import { useStore, type Planet } from "@/state/useStore";
+import { Mesh } from "three";
+import { useStore, type Planet, type Vec3 } from "@/state/useStore";
+import { ExoplanetClickHandler } from "@/utils/PlanetClickHandler";
 
 // 구면 좌표를 직교 좌표로 변환
 function sph2cart(
@@ -56,36 +56,19 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
   const {
     threshold,
     selectedId,
-    setSelectedId,
     setFlyToTarget,
     showOnlyFavorites,
     favorites,
     setBodyPositions,
+    isCameraMoving,
+    setIsCameraMoving,
+    planets,
   } = useStore();
-  const [exoplanets, setExoplanets] = useState<Planet[]>([]);
-
-  // test.json에서 데이터 로드
-  useEffect(() => {
-    fetch("/test.json")
-      .then((res) => res.json())
-      .then((data) => {
-        // test.json 데이터를 Planet 타입으로 변환
-        const planets: Planet[] = data.planets.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          ra: p.ra,
-          dec: p.dec,
-          score: p.score,
-          teq: p.teq,
-          features: p.features,
-        }));
-        console.log("Loaded planets:", planets.length);
-        setExoplanets(planets);
-      })
-      .catch((err) => {
-        console.error("Failed to load exoplanet data:", err);
-      });
-  }, []);
+  // useStore에서 외계행성 데이터 가져오기
+  const exoplanets = useMemo(
+    () => planets.filter((p) => p.ra !== undefined && p.dec !== undefined),
+    [planets]
+  );
 
   const dotRadius = Math.max(0.3, radius * 0.02); // 크기 증가
   const ringInner = dotRadius * 1.8;
@@ -136,28 +119,47 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
     }))
   );
 
-  const selectPlanet = useCallback(
+  const handlePlanetClick = useCallback(
     (p: Planet) => {
-      setSelectedId(p.id);
-    },
-    [setSelectedId]
-  );
+      const clickHandler = new ExoplanetClickHandler();
 
-  const flyToPlanet = useCallback(
-    (p: Planet) => {
-      if (!p.ra || !p.dec) {
+      // 첫 번째 클릭: 행성 선택 (하이라이트)
+      const currentSelectedId = useStore.getState().selectedId;
+      if (currentSelectedId !== p.id) {
+        clickHandler.handleClick(p);
+        return;
+      }
+
+      // 두 번째 클릭: 카메라 이동 (이미 선택된 행성을 다시 클릭)
+      if (isCameraMoving) {
+        // 이미 카메라가 이동 중이면 무시
+        return;
+      }
+
+      if (p.ra === undefined || p.dec === undefined) {
         console.log("Cannot fly to planet - missing ra/dec:", p);
         return;
       }
 
+      // 외계행성 데이터가 유효한지 추가 검증
+      if (
+        typeof p.ra !== "number" ||
+        typeof p.dec !== "number" ||
+        isNaN(p.ra) ||
+        isNaN(p.dec)
+      ) {
+        console.warn("외계행성 좌표 데이터가 유효하지 않습니다:", p);
+        return;
+      }
+
       console.log("Starting flyToPlanet for:", p.name);
-      setSelectedId(p.id);
+      setIsCameraMoving(true);
 
       // 카메라 거리는 반경 비례로 잡아줌
       const [x, y, z] = sph2cart(p.ra, p.dec, radius + SURFACE_OFFSET);
       const len = Math.hypot(x, y, z) || 1;
       const n: [number, number, number] = [x / len, y / len, z / len];
-      const dist = radius * 0.5; // 거리를 더 늘려서 행성을 더 잘 볼 수 있도록
+      const dist = radius * 1.2; // 외계행성은 작으므로 더 멀리서 관찰
       const targetPos: [number, number, number] = [
         n[0] * dist,
         n[1] * dist,
@@ -175,9 +177,25 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
         dist
       );
 
+      // bodyPositions에 외계행성 위치 저장 (Scene.tsx에서 사용)
+      const currentPositions = useStore.getState().bodyPositions;
+      const newPositions = {
+        ...currentPositions,
+        [p.id]: [x, y, z] as Vec3,
+      };
+      setBodyPositions(newPositions);
+
+      // 즉시 bodyPositions 업데이트 후 카메라 이동
+      useStore.setState({ bodyPositions: newPositions });
       setFlyToTarget(targetPos);
     },
-    [radius, setSelectedId, setFlyToTarget]
+    [
+      radius,
+      setFlyToTarget,
+      isCameraMoving,
+      setIsCameraMoving,
+      setBodyPositions,
+    ]
   );
 
   const [hover, setHover] = useState(false);
@@ -215,33 +233,38 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
 
   return (
     <>
-      {points.map(({ p, pos, color }) => (
-        <mesh
-          key={p.id}
-          position={pos}
-          onPointerOver={(e) => {
-            e.stopPropagation();
-            setHover(true);
-          }}
-          onPointerOut={(e) => {
-            e.stopPropagation();
-            setHover(false);
-          }}
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            console.log("Single click on exoplanet:", p.name);
-            selectPlanet(p);
-          }}
-          onDoubleClick={(e) => {
-            e.stopPropagation();
-            console.log("Double click on exoplanet:", p.name);
-            flyToPlanet(p);
-          }}
-        >
-          <sphereGeometry args={[dotRadius, 16, 16]} />
-          <meshBasicMaterial color={color} transparent opacity={0.8} />
-        </mesh>
-      ))}
+      {points.map(({ p, pos, color }) => {
+        const clickHandler = new ExoplanetClickHandler();
+        const visualState = clickHandler.getVisualState(p);
+
+        return (
+          <mesh
+            key={p.id}
+            position={pos}
+            renderOrder={visualState.renderOrder}
+            onPointerOver={(e) => {
+              e.stopPropagation();
+              setHover(true);
+            }}
+            onPointerOut={(e) => {
+              e.stopPropagation();
+              setHover(false);
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log("Click on exoplanet:", p.name);
+              handlePlanetClick(p);
+            }}
+          >
+            <sphereGeometry args={[dotRadius, 16, 16]} />
+            <meshBasicMaterial
+              color={visualState.isOtherSelected ? "#666666" : color}
+              transparent
+              opacity={visualState.isOtherSelected ? visualState.opacity : 0.8}
+            />
+          </mesh>
+        );
+      })}
 
       {selPos && (
         <mesh ref={ringRef} position={selPos}>

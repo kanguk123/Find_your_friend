@@ -13,17 +13,14 @@ import Rocket from "./Rocket";
 import BlackHole from "./BlackHole";
 import GameHUD from "./GameHUD";
 import ModeSwitch from "./ModeSwitch";
-import PlanetCard from "./PlanetCard";
 import FavoriteFilter from "./FavoriteFilter";
 import HyperparameterPanel from "./HyperparameterPanel";
 import ModelAccuracy from "./ModelAccuracy";
-import ExoplanetLoader from "./ExoplanetLoader";
 import ExoplanetPoints from "./ExoplanetPoints";
 import PlanetListPanel from "./PlanetListPanel";
 import { useStore } from "@/state/useStore";
 
-// 키 입력 상태 관리
-const keysPressed: Record<string, boolean> = {};
+// 키 입력 상태는 useStore에서 관리
 
 function Skybox() {
   const texture = useLoader(TextureLoader, "/textures/sky_custom.jpg");
@@ -45,17 +42,27 @@ function CameraRig() {
     mode,
     selectedId,
     bodyPositions,
+    isCameraMoving,
+    setIsCameraMoving,
+    keysPressed,
   } = useStore();
 
   useFrame(() => {
-    // Player 모드에서 WASD 키보드로 카메라 이동 (Expert 모드와 동일)
-    if (mode === "player" && controls && !flyToTarget) {
+    // Player 모드와 Expert 모드에서 WASD 키보드로 카메라 이동
+    if ((mode === "player" || mode === "expert") && controls && !flyToTarget) {
       const moveSpeed = 0.05; // Expert 모드와 동일한 이동 속도
       const target = (controls as unknown as { target: Vector3 }).target;
       const cameraPos = camera.position;
 
-      // 카메라에서 타겟으로의 방향 벡터
-      const direction = new Vector3().subVectors(target, cameraPos);
+      // Player 모드와 Expert 모드 모두에서 선택된 행성을 중심으로 카메라 이동
+      let centerPoint = new Vector3(0, 0, 0); // 기본 중심점 (태양)
+      if (selectedId && bodyPositions[selectedId]) {
+        const [px, py, pz] = bodyPositions[selectedId];
+        centerPoint.set(px, py, pz);
+      }
+
+      // 카메라에서 중심점으로의 방향 벡터
+      const direction = new Vector3().subVectors(centerPoint, cameraPos);
 
       let shouldUpdate = false;
 
@@ -97,11 +104,12 @@ function CameraRig() {
       }
     }
 
-    // 🔻 로켓 추적 중이면 fly-to 무시 (항상 로켓 시점 우선)
-    if (followRocket) return;
-
     // flyToTarget이 없으면 리턴
     if (!flyToTarget) return;
+
+    // 🔻 로켓 추적 중이면 fly-to 무시 (항상 로켓 시점 우선)
+    // 단, 행성 클릭으로 인한 카메라 이동은 허용
+    if (followRocket && !isCameraMoving) return;
 
     const cur = camera.position;
     const [tx, ty, tz] = flyToTarget;
@@ -112,37 +120,7 @@ function CameraRig() {
     cur.y += (ty - cur.y) * moveSpeed;
     cur.z += (tz - cur.z) * moveSpeed;
 
-    // 디버깅 로그 (외계행성 이동 확인용)
-    if (selectedId && bodyPositions[selectedId]) {
-      console.log(
-        "Moving to exoplanet:",
-        selectedId,
-        "current pos:",
-        [cur.x, cur.y, cur.z],
-        "target pos:",
-        [tx, ty, tz]
-      );
-    }
-
-    if (mode === "player") {
-      // Player 모드: 선택된 행성을 바라봄
-      if (selectedId && bodyPositions[selectedId]) {
-        const [px, py, pz] = bodyPositions[selectedId];
-        camera.lookAt(px, py, pz);
-      } else {
-        camera.lookAt(0, 0, 0);
-      }
-
-      // 도착 확인 (외계행성은 더 큰 임계값 사용)
-      const distance = Math.hypot(cur.x - tx, cur.y - ty, cur.z - tz);
-      const threshold = selectedId && bodyPositions[selectedId] ? 2.0 : 0.1; // 외계행성은 2.0, 태양계 행성은 0.1
-
-      if (distance < threshold) {
-        camera.position.set(tx, ty, tz);
-        setFlyToTarget(undefined);
-        console.log("Arrived at target:", selectedId, "distance:", distance);
-      }
-    } else if (mode === "expert" && controls) {
+    if ((mode === "player" || mode === "expert") && controls) {
       // Expert 모드: OrbitControls 타겟을 행성으로 설정
       const orbitControls = controls as unknown as {
         target: Vector3;
@@ -159,57 +137,6 @@ function CameraRig() {
 
       orbitControls.update();
 
-      // Expert 모드에서 WASD 키보드로 카메라 이동 (Player 모드와 동일)
-      if (!flyToTarget) {
-        const moveSpeed = 0.05; // Player 모드와 동일한 이동 속도
-
-        const target = orbitControls.target;
-        const cameraPos = camera.position;
-
-        // 카메라에서 타겟으로의 방향 벡터
-        const direction = new Vector3().subVectors(target, cameraPos);
-        const distance = direction.length();
-
-        let shouldUpdate = false;
-
-        // W/S: 앞뒤 이동
-        if (keysPressed["w"] || keysPressed["arrowup"]) {
-          direction.normalize().multiplyScalar(moveSpeed);
-          camera.position.add(direction);
-          target.add(direction);
-          shouldUpdate = true;
-        }
-        if (keysPressed["s"] || keysPressed["arrowdown"]) {
-          direction.normalize().multiplyScalar(-moveSpeed);
-          camera.position.add(direction);
-          target.add(direction);
-          shouldUpdate = true;
-        }
-
-        // A/D: 좌우 이동
-        if (keysPressed["a"] || keysPressed["arrowleft"]) {
-          const up = new Vector3(0, 1, 0);
-          const right = new Vector3().crossVectors(direction, up).normalize();
-          right.multiplyScalar(moveSpeed);
-          camera.position.add(right);
-          target.add(right);
-          shouldUpdate = true;
-        }
-        if (keysPressed["d"] || keysPressed["arrowright"]) {
-          const up = new Vector3(0, 1, 0);
-          const right = new Vector3().crossVectors(direction, up).normalize();
-          right.multiplyScalar(-moveSpeed);
-          camera.position.add(right);
-          target.add(right);
-          shouldUpdate = true;
-        }
-
-        // 키 입력이 있을 때만 컨트롤 업데이트
-        if (shouldUpdate) {
-          orbitControls.update();
-        }
-      }
-
       // 도착 확인 (외계행성은 더 큰 임계값 사용)
       const distance = Math.hypot(cur.x - tx, cur.y - ty, cur.z - tz);
       const threshold = selectedId && bodyPositions[selectedId] ? 2.0 : 0.2; // 외계행성은 2.0, 태양계 행성은 0.2
@@ -225,6 +152,7 @@ function CameraRig() {
 
         orbitControls.update();
         setFlyToTarget(undefined);
+        setIsCameraMoving(false);
         console.log(
           "Arrived at target (Expert mode):",
           selectedId,
@@ -239,17 +167,37 @@ function CameraRig() {
 
 export default function Scene() {
   const [autoRotate, setAutoRotate] = useState(true);
-  const { mode, selectedId, setSelectedId, planets, setFlyToTarget } =
-    useStore();
+  const {
+    mode,
+    selectedId,
+    setSelectedId,
+    planets,
+    setFlyToTarget,
+    flyToTarget,
+    bodyPositions,
+    setKeysPressed,
+  } = useStore();
   const selectedPlanet = planets.find((p) => p.id === selectedId);
+  // 외계행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
+  const isExoplanet =
+    selectedPlanet &&
+    selectedPlanet.ra !== undefined &&
+    selectedPlanet.dec !== undefined;
 
   // 키보드 입력 처리
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // ESC 키로 선택 해제
+      // ESC 키로 카메라 고정 해제 (선택은 유지)
       if (e.key === "Escape") {
         setFlyToTarget(undefined);
+        return;
+      }
+
+      // Player 모드에서 스페이스바로 선택 해제
+      if (mode === "player" && e.code === "Space") {
+        e.preventDefault();
         setSelectedId(undefined);
+        setFlyToTarget(undefined);
         return;
       }
 
@@ -268,7 +216,7 @@ export default function Scene() {
         ].includes(key)
       ) {
         e.preventDefault();
-        keysPressed[key] = true;
+        setKeysPressed(key, true);
       }
     };
 
@@ -286,7 +234,7 @@ export default function Scene() {
           "arrowright",
         ].includes(key)
       ) {
-        keysPressed[key] = false;
+        setKeysPressed(key, false);
       }
     };
 
@@ -296,13 +244,10 @@ export default function Scene() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [setFlyToTarget, setSelectedId]);
+  }, [setFlyToTarget, setSelectedId, setKeysPressed]);
 
   return (
     <div className="relative h-screen w-full">
-      {/* 샘플 데이터 로더 */}
-      <ExoplanetLoader />
-
       {/* 모드 전환 UI - 최상단 중앙 */}
       <div className="pointer-events-none absolute top-3 left-0 right-0 z-50 flex justify-center px-4">
         <div className="pointer-events-auto">
@@ -352,8 +297,8 @@ export default function Scene() {
         <div className="pointer-events-auto bg-black/60 border border-white/15 rounded-xl p-3 backdrop-blur-sm">
           <InfoPanel />
         </div>
-        {/* ESC 키 안내 - 행성이 선택되었을 때만 표시 */}
-        {selectedId && (
+        {/* ESC 키 안내 - 카메라가 고정되었을 때만 표시 */}
+        {flyToTarget && (
           <div className="pointer-events-none bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 backdrop-blur-sm text-white text-xs sm:text-sm text-center">
             Press{" "}
             <kbd className="px-1.5 py-0.5 bg-white/20 rounded border border-white/30 font-mono text-[10px] sm:text-xs">
@@ -376,8 +321,23 @@ export default function Scene() {
         </div>
       )}
 
-      {/* Player 모드 전용 - 좌하단 게임 HUD */}
-      {mode === "player" && <GameHUD />}
+      {/* Player 모드 - Expert 패널들 + 게임 HUD */}
+      {mode === "player" && (
+        <>
+          {/* Expert 패널들 - 우측 상단 */}
+          <div className="pointer-events-none absolute top-16 right-3 z-50 w-80 space-y-3 max-h-[calc(100vh-16rem)] overflow-y-auto">
+            <div className="pointer-events-auto">
+              <HyperparameterPanel />
+            </div>
+            <div className="pointer-events-auto">
+              <ModelAccuracy />
+            </div>
+          </div>
+
+          {/* 게임 HUD - 좌하단 */}
+          <GameHUD />
+        </>
+      )}
 
       {/* Data Training 버튼 - 하단 중앙 */}
       <div className="pointer-events-none absolute bottom-3 left-1/2 transform -translate-x-1/2 z-50">
@@ -403,14 +363,6 @@ export default function Scene() {
           </Link>
         </div>
       </div>
-
-      {/* 행성 카드 (선택된 행성이 있을 때) */}
-      {selectedPlanet && (
-        <PlanetCard
-          planet={selectedPlanet}
-          onClose={() => setSelectedId(undefined)}
-        />
-      )}
 
       {/* 3D */}
       <Canvas
