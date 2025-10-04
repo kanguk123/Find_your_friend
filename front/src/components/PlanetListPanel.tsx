@@ -118,45 +118,51 @@ export default function PlanetListPanel() {
 
     // 태양계 행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
     if (planet.ra === undefined || planet.dec === undefined) {
-      // 다른 태양계 행성의 경우 - SolarSystem.tsx와 동일한 로직 사용
-      const solarPlanet = PLANETS.find((p) => p.id === planet.id) || SUN;
-      const orbitRadius = solarPlanet.orbitRadius || 0;
+      // 태양인 경우 - SolarSystem.tsx의 SunCore와 동일한 로직 사용
+      if (planet.id === SUN.id) {
+        // 태양은 중심에 있으므로 적당한 거리에서 보기
+        setFlyToTarget([0, 0, 4]);
+      } else {
+        // 다른 태양계 행성의 경우 - SolarSystem.tsx와 동일한 로직 사용
+        const solarPlanet = PLANETS.find((p) => p.id === planet.id) || SUN;
+        const orbitRadius = solarPlanet.orbitRadius || 0;
 
-      // 행성 크기에 따라 카메라 거리 조정
-      const planetRadius = solarPlanet.radius * 0.62; // GLOBAL_PLANET_SCALE 적용
-      const cameraDistance = planetRadius * 4.5; // 더 멀리
+        // 행성 크기에 따라 카메라 거리 조정
+        const planetRadius = solarPlanet.radius * 0.62; // GLOBAL_PLANET_SCALE 적용
+        const cameraDistance = planetRadius * 4.5; // 더 멀리
 
-      // 태양계 행성의 현재 위치 계산 (SolarSystem.tsx와 동일한 로직)
-      const timeScale = 60; // SolarSystem에서 사용하는 timeScale
-      const TAU = Math.PI * 2;
-      const ORBIT_SCALE = 1; // SolarSystem에서 사용하는 ORBIT_SCALE
+        // 태양계 행성의 현재 위치 계산 (SolarSystem.tsx와 동일한 로직)
+        const timeScale = 60; // SolarSystem에서 사용하는 timeScale
+        const TAU = Math.PI * 2;
+        const ORBIT_SCALE = 1; // SolarSystem에서 사용하는 ORBIT_SCALE
 
-      const now = Date.now();
-      const seconds = now / 1000;
-      const omega =
-        timeScale === 0
-          ? 0
-          : TAU / ((solarPlanet.periodDays! * 86400) / timeScale);
-      const angle = omega * seconds;
-      const r = orbitRadius * ORBIT_SCALE;
-      const x = r * Math.cos(angle);
-      const y = 0;
-      const z = r * Math.sin(angle);
+        const now = Date.now();
+        const seconds = now / 1000;
+        const omega =
+          timeScale === 0
+            ? 0
+            : TAU / ((solarPlanet.periodDays! * 86400) / timeScale);
+        const angle = omega * seconds;
+        const r = orbitRadius * ORBIT_SCALE;
+        const x = r * Math.cos(angle);
+        const y = 0;
+        const z = r * Math.sin(angle);
 
-      // 태양(0, 0, 0)에서 행성으로 향하는 방향 벡터 (정규화)
-      const dirX = x;
-      const dirZ = z;
-      const len = Math.hypot(dirX, dirZ) || 1;
-      const normalX = dirX / len;
-      const normalZ = dirZ / len;
+        // 태양(0, 0, 0)에서 행성으로 향하는 방향 벡터 (정규화)
+        const dirX = x;
+        const dirZ = z;
+        const len = Math.hypot(dirX, dirZ) || 1;
+        const normalX = dirX / len;
+        const normalZ = dirZ / len;
 
-      // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
-      // 행성의 밝은 면을 정면에서 봄
-      const camX = x + normalX * cameraDistance;
-      const camY = y + cameraDistance * 0.15; // 약간 위에서
-      const camZ = z + normalZ * cameraDistance;
+        // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
+        // 행성의 밝은 면을 정면에서 봄
+        const camX = x + normalX * cameraDistance;
+        const camY = y + cameraDistance * 0.15; // 약간 위에서
+        const camZ = z + normalZ * cameraDistance;
 
-      setFlyToTarget([camX, camY, camZ]);
+        setFlyToTarget([camX, camY, camZ]);
+      }
     } else {
       // 외계행성의 경우 - ExoplanetPoints.tsx와 동일한 로직 사용
       if (!planet.ra || !planet.dec) {
