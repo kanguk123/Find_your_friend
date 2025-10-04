@@ -291,39 +291,43 @@ export default function Scene() {
 
       {/* Expert 모드 전용 패널들 - 우측 하단 */}
       {mode === "expert" && (
-        <div className="pointer-events-none absolute bottom-3 right-3 z-50 w-80 space-y-3">
+        <div className="pointer-events-none absolute bottom-3 right-3 z-50 w-80 space-y-3 max-h-[calc(100vh-1.5rem)] overflow-y-auto">
           <div className="pointer-events-auto">
             <HyperparameterPanel />
           </div>
           <div className="pointer-events-auto">
             <ModelAccuracy />
           </div>
-          <div className="pointer-events-auto">
-            <Link
-              href="/training"
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold rounded-lg transition-all shadow-lg"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                />
-              </svg>
-              Data Training
-            </Link>
-          </div>
         </div>
       )}
 
       {/* Player 모드 전용 - 좌하단 게임 HUD */}
       {mode === "player" && <GameHUD />}
+
+      {/* Data Training 버튼 - 하단 중앙 */}
+      <div className="pointer-events-none absolute bottom-3 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="pointer-events-auto">
+          <Link
+            href="/training"
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold rounded-lg transition-all shadow-lg"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+              />
+            </svg>
+            Data Training
+          </Link>
+        </div>
+      </div>
 
       {/* 행성 카드 (선택된 행성이 있을 때) */}
       {selectedPlanet && (

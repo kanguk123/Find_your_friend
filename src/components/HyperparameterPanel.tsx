@@ -53,9 +53,9 @@ export default function HyperparameterPanel() {
 
       {/* Content */}
       {isExpanded && (
-        <div className="px-4 pb-4 space-y-4 max-h-96 overflow-y-auto">
+        <div className="px-4 pb-4 space-y-3 max-h-64 overflow-y-auto">
           {/* Save Button */}
-          <div className="pb-4 border-b border-white/10">
+          <div className="pb-3 border-b border-white/10">
             <button
               onClick={handleSave}
               disabled={isSaving}
