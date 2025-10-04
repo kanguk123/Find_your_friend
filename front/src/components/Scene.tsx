@@ -457,18 +457,13 @@ export default function Scene() {
         <div className="pointer-events-auto bg-black/60 border border-white/15 rounded-xl p-3 backdrop-blur-sm">
           <InfoPanel />
         </div>
-        {/* ESC 키 안내 - 카메라가 고정되었을 때만 표시 */}
-        {flyToTarget && (
-          <div className="pointer-events-none bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 backdrop-blur-sm text-white text-xs sm:text-sm text-center">
-      {/* ESC 키 안내 - 카메라가 고정되었을 때 또는 행성이 선택되었을 때 표시 */}
-      {(flyToTarget || isCameraMoving || selectedId) && (
-        <div className="pointer-events-none absolute bottom-3 left-3 z-40">
+        {/* ESC 키 안내 - 카메라가 고정되었을 때 또는 행성이 선택되었을 때 표시 */}
+        {(flyToTarget || isCameraMoving || selectedId) && (
           <div className="pointer-events-auto bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 backdrop-blur-sm text-white text-xs sm:text-sm text-center">
             Press{" "}
             <kbd className="px-1.5 py-0.5 bg-white/20 rounded border border-white/30 font-mono text-[10px] sm:text-xs">
               ESC
             </kbd>{" "}
-            to release camera
             to {flyToTarget || isCameraMoving ? "release camera" : "deselect planet"}
           </div>
         )}
