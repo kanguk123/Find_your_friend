@@ -73,6 +73,36 @@ python run.py
 
 ---
 
+## 🧪 테스트 실행
+
+### 기본 테스트
+```bash
+# 모든 테스트 실행 (19개)
+pytest
+
+# 상세 출력
+pytest -v
+
+# 커버리지와 함께
+pytest --cov=app --cov-report=html
+```
+
+### 특정 테스트만
+```bash
+# 행성 API 테스트
+pytest tests/test_planets.py
+
+# 예측 API 테스트
+pytest tests/test_predict.py
+
+# 모델 관리 테스트
+pytest tests/test_model.py
+```
+
+**결과**: 19 passed ✅
+
+---
+
 ## 📊 API 테스트하기
 
 ### Swagger UI에서 테스트
@@ -140,23 +170,103 @@ console.log(result.data.is_exoplanet); // true/false
 
 ---
 
-## 🤖 AI 모델 연동 준비
+## 🤖 AI 모델 연동 (중요!)
 
 현재는 **더미 데이터 모드**입니다. AI 모델이 완성되면:
 
-### 1. `.env` 파일 수정
+### 1단계: AI 서버 구축
+
+AI 서버는 다음 인터페이스를 제공해야 합니다:
+
+**요청**:
+```json
+POST http://localhost:8001/predict
+{
+    "features": {
+        "feature_000": 1.234,
+        "feature_001": 0.567,
+        ...  // 총 300개
+    }
+}
+```
+
+**응답**:
+```json
+{
+    "probability": 0.87,
+    "confidence": "high",
+    "model_version": "v0.1",
+    "feature_contributions": [  // 선택사항
+        {
+            "feature_name": "feature_000",
+            "value": 1.234,
+            "contribution": 0.15,
+            "importance": 0.95
+        }
+    ],
+    "top_correlations": {  // 선택사항
+        "feature_000": 0.82,
+        "feature_001": -0.45
+    }
+}
+```
+
+### 2단계: 백엔드 연동
+
+**파일**: `app/services/prediction_service.py` (65번째 줄)
+
+현재 코드:
+```python
+if settings.USE_DUMMY_DATA:
+    return PredictionService._generate_dummy_prediction(planet, include_details)
+else:
+    raise AIServiceException("AI service integration not yet implemented")
+```
+
+수정 후:
+```python
+if settings.USE_DUMMY_DATA:
+    return PredictionService._generate_dummy_prediction(planet, include_details)
+else:
+    import httpx
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{settings.AI_SERVICE_URL}/predict",
+            json={"features": planet.features}
+        )
+        ai_result = response.json()
+
+    return PredictionResponse(
+        planet_id=planet.id,
+        probability=ai_result["probability"],
+        confidence=ai_result["confidence"],
+        model_version=ai_result["model_version"],
+        # ... 나머지 필드
+    )
+```
+
+### 3단계: 환경 변수 수정
+
+`.env` 파일:
 ```env
 USE_DUMMY_DATA=False
 AI_SERVICE_URL=http://localhost:8001
 ```
 
-### 2. AI 서버 요구사항
-- **입력**: `{"features": {"feature_000": 1.23, ...}}`
-- **출력**: `{"probability": 0.87, "confidence": "high", ...}`
-- **엔드포인트**: `POST /predict`
+### 4단계: 테스트
 
-### 3. 코드 수정 위치
-`app/services/prediction_service.py`의 65번째 줄부터 AI 연동 코드 주석 처리되어 있음
+```bash
+# AI 서버 실행 (포트 8001)
+cd ai
+python app.py
+
+# 백엔드 서버 실행 (포트 8000)
+cd back
+python run.py
+
+# 테스트
+curl http://localhost:8000/predict/1
+```
 
 ---
 
@@ -229,12 +339,95 @@ python init_db.py
 
 ---
 
+## 🗄️ DB 수정 방법
+
+### Alembic 마이그레이션 사용
+
+```bash
+# 1. 모델 파일 수정 (예: app/models/planet.py)
+# 새 컬럼 추가:
+# discovered_by = Column(String(100))
+
+# 2. 마이그레이션 생성
+alembic revision --autogenerate -m "Add discovered_by column"
+
+# 3. 적용
+alembic upgrade head
+
+# 4. 롤백 (필요시)
+alembic downgrade -1
+```
+
+### 직접 DB 수정
+```bash
+# PostgreSQL 접속
+psql -U postgres -d nasa_hackathon
+
+# 테이블 확인
+\dt
+
+# 데이터 조회
+SELECT id, name, ai_probability, status FROM planets LIMIT 10;
+```
+
+---
+
+## 🐛 디버깅 팁
+
+### 에러 발생 시
+
+모든 에러는 **통일된 형식**으로 반환됩니다:
+```json
+{
+    "success": false,
+    "message": "Planet with identifier '999' not found",
+    "errors": [{
+        "field": "planet_id",
+        "message": "Planet not found",
+        "error_type": "NotFoundException"
+    }]
+}
+```
+
+### 코드 구조
+```
+[요청] → Router (입력 검증) → Service (비즈니스 로직) → Model (DB)
+```
+
+**에러 위치 파악**:
+- Router 에러 → Pydantic 검증 실패
+- Service 에러 → 비즈니스 로직 문제
+- Model 에러 → DB 쿼리 문제
+
+### 로그 확인
+```bash
+# 서버 실행 시 자동으로 로그 출력
+python run.py
+
+# 로그 예시:
+# ERROR - API Exception: Planet with identifier '999' not found
+#   path: /planets/999
+#   method: GET
+```
+
+---
+
 ## 📚 더 자세한 정보
 
 - **전체 문서**: `README.md`
 - **API 문서**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 - **Health Check**: http://localhost:8000/health
+
+---
+
+## 📋 현재 진행 상황
+
+✅ **백엔드**: 100% 완성 (19개 테스트 통과)
+✅ **DB**: PostgreSQL 연동 완료
+✅ **더미 데이터**: 500개 행성
+⏳ **AI 서버**: 연동 준비 완료 (코드 수정 1곳만 필요)
+⏳ **프론트엔드**: API 연동 필요
 
 ---
 
