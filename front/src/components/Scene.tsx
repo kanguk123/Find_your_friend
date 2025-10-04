@@ -59,9 +59,13 @@ function CameraRig() {
         }
       };
 
-      controls.addEventListener("start", onStart);
+      const orbitControls = controls as {
+        addEventListener: (event: string, callback: () => void) => void;
+        removeEventListener: (event: string, callback: () => void) => void;
+      };
+      orbitControls.addEventListener("start", onStart);
       return () => {
-        controls.removeEventListener("start", onStart);
+        orbitControls.removeEventListener("start", onStart);
       };
     }
   }, [controls]);
@@ -98,14 +102,13 @@ function CameraRig() {
       const cameraPos = camera.position;
 
       // 중심점 설정 (선택된 행성 또는 태양)
-      let centerPoint = new Vector3(0, 0, 0);
+      const centerPoint = new Vector3(0, 0, 0);
       if (selectedId && bodyPositions[selectedId]) {
         const [px, py, pz] = bodyPositions[selectedId];
         centerPoint.set(px, py, pz);
       }
 
       // 키보드 입력에 따른 카메라/타겟 이동 플래그
-      let isMovingWithKeys = false;
       const moveSpeed = 0.5; // 이동 속도
 
       if (mode === "expert") {
@@ -117,19 +120,15 @@ function CameraRig() {
           // WASD로 카메라만 이동 (행성 중심 유지)
           if (keysPressed["w"] || keysPressed["arrowup"]) {
             camera.position.z += moveSpeed;
-            isMovingWithKeys = true;
           }
           if (keysPressed["s"] || keysPressed["arrowdown"]) {
             camera.position.z -= moveSpeed;
-            isMovingWithKeys = true;
           }
           if (keysPressed["a"] || keysPressed["arrowleft"]) {
             camera.position.x -= moveSpeed;
-            isMovingWithKeys = true;
           }
           if (keysPressed["d"] || keysPressed["arrowright"]) {
             camera.position.x += moveSpeed;
-            isMovingWithKeys = true;
           }
         } else {
           // 선택된 행성이 없으면 태양 중심으로
@@ -139,22 +138,18 @@ function CameraRig() {
           if (keysPressed["w"] || keysPressed["arrowup"]) {
             camera.position.z += moveSpeed;
             target.z += moveSpeed;
-            isMovingWithKeys = true;
           }
           if (keysPressed["s"] || keysPressed["arrowdown"]) {
             camera.position.z -= moveSpeed;
             target.z -= moveSpeed;
-            isMovingWithKeys = true;
           }
           if (keysPressed["a"] || keysPressed["arrowleft"]) {
             camera.position.x -= moveSpeed;
             target.x -= moveSpeed;
-            isMovingWithKeys = true;
           }
           if (keysPressed["d"] || keysPressed["arrowright"]) {
             camera.position.x += moveSpeed;
             target.x += moveSpeed;
-            isMovingWithKeys = true;
           }
         }
       } else {
@@ -167,7 +162,6 @@ function CameraRig() {
             .multiplyScalar(0.05);
           camera.position.add(direction);
           target.add(direction);
-          isMovingWithKeys = true;
         }
         if (keysPressed["s"] || keysPressed["arrowdown"]) {
           const direction = new Vector3()
@@ -176,7 +170,6 @@ function CameraRig() {
             .multiplyScalar(-0.05);
           camera.position.add(direction);
           target.add(direction);
-          isMovingWithKeys = true;
         }
 
         // A/D: 좌우 이동 (Panning)
@@ -189,7 +182,6 @@ function CameraRig() {
             .multiplyScalar(0.05);
           camera.position.add(right);
           target.add(right);
-          isMovingWithKeys = true;
         }
         if (keysPressed["d"] || keysPressed["arrowright"]) {
           const direction = new Vector3().subVectors(target, cameraPos);
@@ -200,7 +192,6 @@ function CameraRig() {
             .multiplyScalar(-0.05);
           camera.position.add(right);
           target.add(right);
-          isMovingWithKeys = true;
         }
       }
 
@@ -288,10 +279,8 @@ export default function Scene() {
     mode,
     selectedId,
     setSelectedId,
-    planets,
     setFlyToTarget,
     flyToTarget,
-    bodyPositions,
     setKeysPressed,
     bumpReset,
     showPlanetCard,
@@ -300,12 +289,6 @@ export default function Scene() {
     setSelectedPlanetData,
     isCameraMoving,
   } = useStore();
-  const selectedPlanet = planets.find((p) => p.id === selectedId);
-  // 외계행성인지 확인 (ra, dec가 undefined이거나 null이면 태양계 행성)
-  const isExoplanet =
-    selectedPlanet &&
-    selectedPlanet.ra !== undefined &&
-    selectedPlanet.dec !== undefined;
 
   // 키보드 입력 처리
   useEffect(() => {
