@@ -17,6 +17,7 @@ import HyperparameterPanel from "./HyperparameterPanel";
 import ModelAccuracy from "./ModelAccuracy";
 import ExoplanetPoints from "./ExoplanetPoints";
 import PlanetListPanel from "./PlanetListPanel";
+import PlanetCard from "./PlanetCard";
 import { useStore } from "@/state/useStore";
 
 // 키 입력 상태는 useStore에서 관리
@@ -468,6 +469,14 @@ export default function Scene() {
           </div>
         )}
       </div>
+
+      {/* Planet 정보 카드 - 행성 재선택 시 표시 */}
+      {showPlanetCard && selectedPlanetData && (
+        <PlanetCard
+          planet={selectedPlanetData}
+          onClose={() => setShowPlanetCard(false)}
+        />
+      )}
 
       {/* Expert 모드 전용 패널들 - 우측 상단 */}
       {mode === "expert" && (

@@ -124,7 +124,7 @@ function SaturnRing({ body }: { body: Body }) {
 function SunCore() {
   const textures = useSolarTextures();
   const sunTex = SUN.texture ? textures.get(SUN.texture) : undefined;
-  const { setSelectedId, setFlyToTarget, setFollowRocket, selectedId } =
+  const { setSelectedId, setFlyToTarget, selectedId, mode } =
     useStore();
 
   // 행성이 선택되었고, 태양이 아닌 경우 태양을 반투명하게
@@ -148,6 +148,13 @@ function SunCore() {
           },
         };
 
+        // Player 모드에서는 카드만 표시
+        if (mode === "player") {
+          clickHandler.handleClick(planet);
+          return;
+        }
+
+        // Expert 모드에서만 카메라 이동
         const currentSelectedId = useStore.getState().selectedId;
         if (currentSelectedId !== planet.id) {
           clickHandler.handleClick(planet);
@@ -161,7 +168,6 @@ function SunCore() {
         useStore.getState().setIsCameraMoving(true);
         // 태양은 중심에 있으므로 적당한 거리에서 보기
         setFlyToTarget([0, 0, 4]);
-        setFollowRocket(false);
       }}
       onPointerOver={(e) => {
         e.stopPropagation();
@@ -342,6 +348,13 @@ export default function SolarSystem({
 
             const clickHandler = new SolarPlanetClickHandler();
 
+            // Player 모드에서는 카드만 표시하고 카메라 이동 없음
+            if (mode === "player") {
+              clickHandler.handleClick(planet);
+              return;
+            }
+
+            // Expert 모드에서만 카메라 이동 처리
             // 첫 번째 클릭: 행성 선택 (하이라이트)
             const currentSelectedId = useStore.getState().selectedId;
             console.log(
@@ -368,20 +381,12 @@ export default function SolarSystem({
             console.log("SolarSystem - Starting camera movement");
             setIsCameraMoving(true);
 
-            // 로켓 카메라 모드로 전환
-            const { setRocketCameraMode, setRocketCameraTarget } =
-              useStore.getState();
-            setRocketCameraMode("planet_view");
-            setRocketCameraTarget(planet.id);
-            console.log("로켓 카메라 모드로 전환:", planet.name);
             const g = planetRefs.current[p.id];
             if (!g) return;
 
             // 행성 크기에 따라 카메라 거리 조정
             const planetRadius = renderRadius(p);
             const cameraDistance = planetRadius * 4.5; // 더 멀리
-
-            let camX, camY, camZ;
 
             // 현재 행성의 실제 3D 위치를 기준으로 카메라 위치 계산
             const planetX = g.position.x;
@@ -390,55 +395,25 @@ export default function SolarSystem({
 
             console.log("Planet actual position:", [planetX, planetY, planetZ]);
 
-            if (mode === "player") {
-              // Player 모드: 로켓의 현재 위치를 기준으로 상대적 카메라 위치 계산
-              const [rocketX, rocketY, rocketZ] = rocketPosition;
+            // Expert 모드: 태양을 기준으로 상대적 카메라 위치 계산
+            const dirX = planetX;
+            const dirZ = planetZ;
+            const len = Math.hypot(dirX, dirZ) || 1;
+            const normalX = dirX / len;
+            const normalZ = dirZ / len;
 
-              console.log("Player mode - Rocket position:", rocketPosition);
+            // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
+            const camX = planetX + normalX * cameraDistance;
+            const camY = planetY + cameraDistance * 0.15;
+            const camZ = planetZ + normalZ * cameraDistance;
 
-              // 로켓에서 행성으로의 방향 벡터 (정규화)
-              const dirX = planetX - rocketX;
-              const dirY = planetY - rocketY;
-              const dirZ = planetZ - rocketZ;
-              const len = Math.hypot(dirX, dirY, dirZ) || 1;
-
-              // 행성에서 로켓 방향으로 카메라 배치 (행성을 관찰)
-              // 행성 위치를 기준으로 상대적으로 카메라 위치 계산
-              camX = planetX - (dirX / len) * cameraDistance;
-              camY =
-                planetY - (dirY / len) * cameraDistance + cameraDistance * 0.15;
-              camZ = planetZ - (dirZ / len) * cameraDistance;
-
-              console.log("Camera target position (relative to planet):", [
-                camX,
-                camY,
-                camZ,
-              ]);
-            } else {
-              // Expert 모드: 태양을 기준으로 상대적 카메라 위치 계산
-              const dirX = planetX;
-              const dirZ = planetZ;
-              const len = Math.hypot(dirX, dirZ) || 1;
-              const normalX = dirX / len;
-              const normalZ = dirZ / len;
-
-              // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
-              // 행성 위치를 기준으로 상대적으로 카메라 위치 계산
-              camX = planetX + normalX * cameraDistance;
-              camY = planetY + cameraDistance * 0.15;
-              camZ = planetZ + normalZ * cameraDistance;
-
-              console.log("Camera target position (relative to planet):", [
-                camX,
-                camY,
-                camZ,
-              ]);
-            }
+            console.log("Camera target position (relative to planet):", [
+              camX,
+              camY,
+              camZ,
+            ]);
 
             setFlyToTarget([camX, camY, camZ]);
-
-            // 로켓 추적 해제 (카메라가 행성으로 이동)
-            setFollowRocket(false);
           }}
           onPointerOver={(e) => {
             e.stopPropagation();

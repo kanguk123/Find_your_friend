@@ -44,9 +44,17 @@ export default function PlanetsPoints({ radius = 20 }: { radius?: number }) {
 
     const selectPlanet = useCallback(
         (p: Planet) => {
+            const { setShowPlanetCard, setSelectedPlanetData } = useStore.getState();
+
+            // 행성 선택 및 카드 표시
             setSelectedId(p.id);
+            setShowPlanetCard(true);
+            setSelectedPlanetData(p);
+
             // 카메라 거리는 반경 비례로 잡아줌 (법선 방향으로 0.19*radius 배)
-            const [x, y, z] = sph2cart(p.ra, p.dec, radius + SURFACE_OFFSET);
+            const ra = p.ra ?? 0;
+            const dec = p.dec ?? 0;
+            const [x, y, z] = sph2cart(ra, dec, radius + SURFACE_OFFSET);
             const len = Math.hypot(x, y, z) || 1;
             const n: Vec3 = [x / len, y / len, z / len];
             const dist = radius * 0.19 * 20 / 3.8; // 기존 체감과 비슷한 비율로 조정

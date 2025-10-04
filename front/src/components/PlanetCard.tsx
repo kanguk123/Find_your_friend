@@ -1,37 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useStore, type Planet } from "@/state/useStore";
-import { type PlanetData, type PlanetDetail, ApiService } from "@/services/api";
 
 type Props = {
-  planet: Planet;
-  planetData?: PlanetData; // 서버에서 받아온 원본 데이터
+  planet: any; // Planet | PlanetData 모두 허용
   onClose: () => void;
 };
 
-export default function PlanetCard({ planet, planetData, onClose }: Props) {
+export default function PlanetCard({ planet, onClose }: Props) {
   const { mode, favorites, toggleFavorite } = useStore();
-  const isFavorite = favorites.has(planet.id);
-  const [planetDetail, setPlanetDetail] = useState<PlanetDetail | null>(null);
 
-  // 외계행성인지 확인 (exo-로 시작하면 외계행성)
-  const isExoplanet = planet.id.startsWith("exo-");
+  if (!planet) return null;
 
-  // 외계행성 상세 정보 가져오기
-  useEffect(() => {
-    if (isExoplanet && planetData) {
-      ApiService.getPlanetDetail(planetData.id)
-        .then((response) => {
-          if (response.success) {
-            setPlanetDetail(response.data);
-          }
-        })
-        .catch((error) => {
-          console.error("Failed to load planet detail:", error);
-        });
-    }
-  }, [isExoplanet, planetData]);
+  const planetId = String(planet.id);
+  const isFavorite = favorites.has(planetId);
+
+  // 외계행성인지 확인 (exo- 또는 planet-로 시작하면 외계행성)
+  const isExoplanet = planetId.startsWith("exo-") || planetId.startsWith("planet-");
 
   return (
     <div className="fixed bottom-3 right-3 z-50 pointer-events-auto">
@@ -95,139 +80,96 @@ export default function PlanetCard({ planet, planetData, onClose }: Props) {
         <div className="mb-4">
           <div className="flex items-baseline gap-2 mb-1">
             <span className="text-2xl font-bold text-blue-400">
-              {isExoplanet && planetData
-                ? ((planetData.ai_probability ?? 0) * 100).toFixed(1)
-                : planet.score
+              {planet.ai_probability !== undefined
+                ? (planet.ai_probability * 100).toFixed(1)
+                : planet.score !== undefined
                 ? (planet.score * 100).toFixed(1)
                 : "N/A"}
             </span>
             <span className="text-sm text-white/70">%</span>
           </div>
           <p className="text-xs text-white/60">
-            {isExoplanet ? "AI 확률" : "외계 생명체 존재 가능성"}
+            {planet.ai_probability !== undefined ? "AI Probability" : "Habitability Score"}
           </p>
           <div className="mt-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all"
               style={{
-                width: `${
-                  isExoplanet && planetData
-                    ? (planetData.ai_probability ?? 0) * 100
-                    : (planet.score || 0) * 100
-                }%`,
+                width: `${planet.ai_probability !== undefined ? (planet.ai_probability * 100) : (planet.score || 0) * 100}%`,
               }}
             />
           </div>
         </div>
 
-        {/* 외계행성 disposition 정보 */}
-        {isExoplanet && planetData && (
+        {/* Disposition (외계행성용) */}
+        {planet.disposition && (
           <div className="mb-4">
             <div className="text-xs text-white/50 mb-1 uppercase tracking-wider">
-              Planet Type
+              Status
             </div>
             <div
               className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                planetData.disposition === "CONFIRMED"
+                planet.disposition === "CONFIRMED"
                   ? "bg-green-500/20 text-green-400 border border-green-400/30"
-                  : planetData.disposition === "CANDIDATE"
+                  : planet.disposition === "CANDIDATE"
                   ? "bg-yellow-500/20 text-yellow-400 border border-yellow-400/30"
                   : "bg-red-500/20 text-red-400 border border-red-400/30"
               }`}
             >
-              {planetData.disposition}
-            </div>
-          </div>
-        )}
-
-        {/* Expert 모드: Feature Correlation */}
-        {mode === "expert" && isExoplanet && planetDetail?.feature_correlations && (
-          <div className="mb-4 space-y-2">
-            <h3 className="text-xs font-semibold text-white/80 uppercase tracking-wider">
-              Top 5 Feature Correlations
-            </h3>
-            <div className="space-y-1">
-              {planetDetail.feature_correlations.slice(0, 5).map((corr, index) => (
-                <div key={index} className="flex items-center justify-between text-xs">
-                  <span className="text-white/60 truncate max-w-[140px]" title={`${corr.feature1} - ${corr.feature2}`}>
-                    {corr.feature1.substring(0, 8)}...{corr.feature2.substring(0, 8)}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <div className="h-1.5 w-16 bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${
-                          Math.abs(corr.correlation) > 0.7 ? 'bg-red-400' :
-                          Math.abs(corr.correlation) > 0.5 ? 'bg-orange-400' :
-                          Math.abs(corr.correlation) > 0.3 ? 'bg-yellow-400' :
-                          'bg-green-400'
-                        }`}
-                        style={{ width: `${Math.abs(corr.correlation) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-white/80 w-10 text-right">
-                      {(corr.correlation * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                </div>
-              ))}
+              {planet.disposition}
             </div>
           </div>
         )}
 
         {/* 좌표 정보 */}
         <div className="mb-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-xs text-white/50 mb-1">Right Ascension</div>
-              <div className="text-xs font-mono text-white">
-                {isExoplanet && planetData
-                  ? planetData.ra?.toFixed(2)
-                  : planet.ra?.toFixed(2)}
-                °
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-white/50 mb-1">Declination</div>
-              <div className="text-xs font-mono text-white">
-                {isExoplanet && planetData
-                  ? planetData.dec?.toFixed(2)
-                  : planet.dec?.toFixed(2)}
-                °
-              </div>
-            </div>
-          </div>
-
-          {isExoplanet && planetData && (
-            <div className="grid grid-cols-3 gap-3">
+          {planet.ra !== undefined && planet.dec !== undefined && (
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <div className="text-xs text-white/50 mb-1">Distance (R)</div>
+                <div className="text-xs text-white/50 mb-1">Right Ascension</div>
                 <div className="text-xs font-mono text-white">
-                  {planetData.r?.toFixed(2)} pc
+                  {planet.ra.toFixed(2)}°
                 </div>
               </div>
-              <div className="col-span-2">
-                <div className="text-xs text-white/50 mb-1">3D Coordinates</div>
+              <div>
+                <div className="text-xs text-white/50 mb-1">Declination</div>
                 <div className="text-xs font-mono text-white">
-                  ({planetData.coordinates_3d?.x.toFixed(1)}, {planetData.coordinates_3d?.y.toFixed(1)}, {planetData.coordinates_3d?.z.toFixed(1)})
+                  {planet.dec.toFixed(2)}°
                 </div>
               </div>
             </div>
           )}
 
-          {(isExoplanet && planetData?.teq) || planet.teq ? (
+          {planet.teq !== undefined && (
             <div>
               <div className="text-xs text-white/50 mb-1">
                 Equilibrium Temperature
               </div>
               <div className="text-xs font-mono text-white">
-                {isExoplanet && planetData
-                  ? planetData.teq?.toFixed(0)
-                  : planet.teq?.toFixed(0)}{" "}
-                K
+                {planet.teq.toFixed(0)} K
               </div>
             </div>
-          ) : null}
+          )}
         </div>
+
+        {/* Expert 모드: Features */}
+        {mode === "expert" && planet.features && Object.keys(planet.features).length > 0 && (
+          <div className="mb-4 space-y-2">
+            <h3 className="text-xs font-semibold text-white/80 uppercase tracking-wider">
+              Features
+            </h3>
+            <div className="space-y-1">
+              {Object.entries(planet.features).map(([key, value]) => (
+                value !== undefined && (
+                  <div key={key} className="flex items-center justify-between text-xs">
+                    <span className="text-white/60">{key}</span>
+                    <span className="text-white/80">{value.toFixed(3)}</span>
+                  </div>
+                )
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

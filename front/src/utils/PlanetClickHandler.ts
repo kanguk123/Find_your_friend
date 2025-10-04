@@ -8,9 +8,13 @@ export abstract class PlanetClickHandler {
   handleClick(planet: Planet): void {
     const currentSelectedId = this.store.selectedId;
 
+    // 행성 선택 및 카드 표시
+    this.store.setSelectedId(planet.id);
+    this.store.setShowPlanetCard(true);
+    this.store.setSelectedPlanetData(planet);
+
     // 첫 번째 클릭: 행성 선택 (하이라이트)
     if (currentSelectedId !== planet.id) {
-      this.store.setSelectedId(planet.id);
       this.store.setIsCameraMoving(false);
       return;
     }
