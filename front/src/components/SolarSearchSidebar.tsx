@@ -4,24 +4,26 @@ import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { useStore } from "@/state/useStore";
 import { SUN, PLANETS, type Body } from "@/data/solar";
 
-type Item = { id: string; name: string };
+type Item = { id: string; name: string; isExoplanet?: boolean };
 
 export default function SolarSearchSidebar() {
+  const { bodyPositions, setSelectedId, setFlyToTarget, setFollowRocket, planets, setIsCameraMoving } =
+    useStore();
+
   const catalog = useMemo<Item[]>(
     () => [
-      { id: SUN.id, name: SUN.name },
-      ...PLANETS.map((p) => ({ id: p.id, name: p.name })),
+      { id: SUN.id, name: SUN.name, isExoplanet: false },
+      ...PLANETS.map((p) => ({ id: p.id, name: p.name, isExoplanet: false })),
+      ...planets
+        .filter((p) => p.ra !== undefined && p.dec !== undefined)
+        .map((p) => ({ id: p.id, name: p.name, isExoplanet: true })),
     ],
-    []
+    [planets]
   );
-
-  const { bodyPositions, setSelectedId, setFlyToTarget, setFollowRocket } =
-    useStore();
 
   const [q, setQ] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
   const [focused, setFocused] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const blurTimer = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -32,65 +34,118 @@ export default function SolarSearchSidebar() {
           (i) =>
             i.name.toLowerCase().includes(s) || i.id.toLowerCase().includes(s)
         )
-      : catalog;
+      : [];
     return base.slice(0, 8);
   }, [catalog, q]);
 
-  const showDropdown = showSuggestions && focused && list.length > 0;
+  // 입력이 있고 포커스되어 있으면 자동으로 suggestions 표시
+  const showDropdown = focused && list.length > 0 && q.trim().length > 0;
 
   useEffect(() => {
     setActiveIdx(0);
   }, [q]);
 
   const flyTo = useCallback(
-    (id: string) => {
+    (id: string, isExoplanet: boolean = false) => {
       // 같은 행성을 다시 선택하면 카메라 이동하지 않음
       const currentSelectedId = useStore.getState().selectedId;
       if (currentSelectedId === id) {
         setQ("");
-        setShowSuggestions(false);
+        setFocused(false);
+        inputRef.current?.blur();
         return;
       }
 
+      // 검색 후 입력창 초기화 및 포커스 제거
+      setQ("");
+      setFocused(false);
+      inputRef.current?.blur();
+
       setSelectedId(id);
-      const pos = bodyPositions[id];
-      if (!pos) return;
-      const [x, y, z] = pos;
+      setIsCameraMoving(true);
 
-      // 선택된 천체의 정보 가져오기
-      const allBodies = [SUN, ...PLANETS];
-      const body = allBodies.find((b) => b.id === id);
-      if (!body) return;
+      if (isExoplanet) {
+        // 외계행성 처리
+        const planet = planets.find((p) => p.id === id);
+        if (!planet || planet.ra === undefined || planet.dec === undefined) {
+          console.warn("외계행성 데이터를 찾을 수 없습니다:", id);
+          setIsCameraMoving(false);
+          return;
+        }
 
-      // 행성 크기에 따라 카메라 거리 조정
-      const planetRadius = body.id === "sun" ? body.radius : body.radius * 0.62; // GLOBAL_PLANET_SCALE 적용
-      const cameraDistance = planetRadius * 4.5; // 더 멀리
+        console.log("Search: Flying to exoplanet:", planet.name, "id:", id);
 
-      // 태양(0, 0, 0)에서 행성으로 향하는 방향 벡터 (정규화)
-      const len = Math.hypot(x, z) || 1;
-      const normalX = x / len;
-      const normalZ = z / len;
+        // 외계행성 위치 계산
+        const radius = 30; // ExoplanetPoints의 radius와 동일
+        const SURFACE_OFFSET = 0.1;
+        const phi = (planet.ra * Math.PI) / 180;
+        const theta = (planet.dec * Math.PI) / 180;
+        const x = (radius + SURFACE_OFFSET) * Math.cos(theta) * Math.cos(phi);
+        const y = (radius + SURFACE_OFFSET) * Math.sin(theta);
+        const z = (radius + SURFACE_OFFSET) * Math.cos(theta) * Math.sin(phi);
 
-      // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
-      // 행성의 밝은 면을 정면에서 봄
-      const camX = x + normalX * cameraDistance;
-      const camY = y + cameraDistance * 0.15; // 약간 위에서
-      const camZ = z + normalZ * cameraDistance;
+        // 카메라 위치 계산
+        const len = Math.hypot(x, y, z) || 1;
+        const n = [x / len, y / len, z / len];
+        const dist = radius * 1.2;
+        const camX = n[0] * dist;
+        const camY = n[1] * dist;
+        const camZ = n[2] * dist;
 
-      setFlyToTarget([camX, camY, camZ]);
+        console.log("Search: Planet position:", [x, y, z], "Camera target:", [camX, camY, camZ]);
+
+        // bodyPositions 업데이트
+        const { setBodyPositions } = useStore.getState();
+        const newPositions = {
+          ...bodyPositions,
+          [id]: [x, y, z] as [number, number, number],
+        };
+        setBodyPositions(newPositions);
+
+        // 즉시 상태 업데이트 후 카메라 이동
+        useStore.setState({ bodyPositions: newPositions });
+        setFlyToTarget([camX, camY, camZ]);
+      } else {
+        // 태양계 행성 처리
+        const pos = bodyPositions[id];
+        if (!pos) return;
+        const [x, y, z] = pos;
+
+        // 선택된 천체의 정보 가져오기
+        const allBodies = [SUN, ...PLANETS];
+        const body = allBodies.find((b) => b.id === id);
+        if (!body) return;
+
+        // 행성 크기에 따라 카메라 거리 조정
+        const planetRadius = body.id === "sun" ? body.radius : body.radius * 0.62; // GLOBAL_PLANET_SCALE 적용
+        const cameraDistance = planetRadius * 4.5; // 더 멀리
+
+        // 태양(0, 0, 0)에서 행성으로 향하는 방향 벡터 (정규화)
+        const len = Math.hypot(x, z) || 1;
+        const normalX = x / len;
+        const normalZ = z / len;
+
+        // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
+        // 행성의 밝은 면을 정면에서 봄
+        const camX = x + normalX * cameraDistance;
+        const camY = y + cameraDistance * 0.15; // 약간 위에서
+        const camZ = z + normalZ * cameraDistance;
+
+        setFlyToTarget([camX, camY, camZ]);
+      }
 
       // 🔻 로켓 추적 해제 → 로켓은 가만히, 카메라는 천체 보기 모드
       setFollowRocket(false);
-
-      // 검색 후 입력창 초기화
-      setQ("");
-      setShowSuggestions(false);
     },
-    [bodyPositions, setSelectedId, setFlyToTarget, setFollowRocket]
+    [bodyPositions, setSelectedId, setFlyToTarget, setFollowRocket, planets, setIsCameraMoving]
   );
 
   const onKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
-    if (e.key === "Escape") return setShowSuggestions(false);
+    if (e.key === "Escape") {
+      setFocused(false);
+      inputRef.current?.blur();
+      return;
+    }
     if (!list.length) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -100,7 +155,8 @@ export default function SolarSearchSidebar() {
       setActiveIdx((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      flyTo(list[activeIdx].id);
+      const item = list[activeIdx];
+      flyTo(item.id, item.isExoplanet);
     }
   };
 
@@ -111,14 +167,6 @@ export default function SolarSearchSidebar() {
   const handleFocus = () => {
     if (blurTimer.current) window.clearTimeout(blurTimer.current);
     setFocused(true);
-  };
-
-  const toggleSuggestions = () => {
-    setShowSuggestions((v) => {
-      const next = !v;
-      if (next) setTimeout(() => inputRef.current?.focus(), 0);
-      return next;
-    });
   };
 
   return (
@@ -135,19 +183,11 @@ export default function SolarSearchSidebar() {
           onKeyDown={onKeyDown}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          placeholder='Try "Earth", "Mars"...'
+          placeholder='Try "Earth", "Mars", "Planet 123"...'
           className="w-full rounded-md bg-black/60 text-white px-2 sm:px-3 py-1.5 sm:py-2 text-sm outline-none border border-white/15"
         />
 
-        <div className="mt-2 flex items-center justify-between text-xs">
-          <button
-            onClick={toggleSuggestions}
-            className="rounded bg-white/10 px-2 py-1 border border-white/15 hover:bg-white/20"
-          >
-            {showSuggestions && focused && list.length > 0
-              ? "Hide suggestions"
-              : "Show suggestions"}
-          </button>
+        <div className="mt-2 flex items-center justify-end text-xs">
           <span className="opacity-60">
             {q ? `${list.length} match(es)` : "type to search"}
           </span>
@@ -165,9 +205,14 @@ export default function SolarSearchSidebar() {
                   idx === activeIdx ? "bg-white/15" : "hover:bg-white/10"
                 }`}
                 onMouseEnter={() => setActiveIdx(idx)}
-                onClick={() => flyTo(item.id)}
+                onClick={() => flyTo(item.id, item.isExoplanet)}
               >
-                {item.name}
+                <div className="flex items-center justify-between">
+                  <span>{item.name}</span>
+                  {item.isExoplanet && (
+                    <span className="text-xs text-purple-400 ml-2">Exoplanet</span>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
