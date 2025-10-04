@@ -2,9 +2,8 @@
 
 import { useMemo, useRef, useState, useCallback, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Instances, Instance } from "@react-three/drei";
-import { Color, Mesh } from "three";
-import { useStore, type Planet } from "@/state/useStore";
+import { Mesh } from "three";
+import { useStore, type Planet, type Vec3 } from "@/state/useStore";
 import { ExoplanetClickHandler } from "@/utils/PlanetClickHandler";
 
 // 구면 좌표를 직교 좌표로 변환
@@ -57,7 +56,6 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
   const {
     threshold,
     selectedId,
-    setSelectedId,
     setFlyToTarget,
     showOnlyFavorites,
     favorites,
@@ -107,7 +105,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       Object.keys(positions).length,
       "planets"
     );
-  }, [points]);
+  }, [points, setBodyPositions]);
 
   console.log("Filtered points:", points.length, "threshold:", threshold);
   console.log("Dot radius:", dotRadius);
@@ -143,6 +141,17 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
         return;
       }
 
+      // 외계행성 데이터가 유효한지 추가 검증
+      if (
+        typeof p.ra !== "number" ||
+        typeof p.dec !== "number" ||
+        isNaN(p.ra) ||
+        isNaN(p.dec)
+      ) {
+        console.warn("외계행성 좌표 데이터가 유효하지 않습니다:", p);
+        return;
+      }
+
       console.log("Starting flyToPlanet for:", p.name);
       setIsCameraMoving(true);
 
@@ -168,9 +177,25 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
         dist
       );
 
+      // bodyPositions에 외계행성 위치 저장 (Scene.tsx에서 사용)
+      const currentPositions = useStore.getState().bodyPositions;
+      const newPositions = {
+        ...currentPositions,
+        [p.id]: [x, y, z] as Vec3,
+      };
+      setBodyPositions(newPositions);
+
+      // 즉시 bodyPositions 업데이트 후 카메라 이동
+      useStore.setState({ bodyPositions: newPositions });
       setFlyToTarget(targetPos);
     },
-    [radius, setSelectedId, setFlyToTarget, isCameraMoving, setIsCameraMoving]
+    [
+      radius,
+      setFlyToTarget,
+      isCameraMoving,
+      setIsCameraMoving,
+      setBodyPositions,
+    ]
   );
 
   const [hover, setHover] = useState(false);

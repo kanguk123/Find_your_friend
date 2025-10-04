@@ -127,18 +127,6 @@ function CameraRig() {
     cur.y += (ty - cur.y) * moveSpeed;
     cur.z += (tz - cur.z) * moveSpeed;
 
-    // 디버깅 로그 (외계행성 이동 확인용)
-    if (selectedId && bodyPositions[selectedId]) {
-      console.log(
-        "Moving to exoplanet:",
-        selectedId,
-        "current pos:",
-        [cur.x, cur.y, cur.z],
-        "target pos:",
-        [tx, ty, tz]
-      );
-    }
-
     if (mode === "player") {
       // Player 모드: 선택된 행성을 바라봄
       if (selectedId && bodyPositions[selectedId]) {
