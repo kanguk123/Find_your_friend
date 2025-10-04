@@ -20,12 +20,30 @@ function sph2cart(
   return [x, y, z];
 }
 
-// 점수에 따른 색상 생성
-function scoreToHSL(score: number): string {
-  const hue = score * 120; // 0-120 (빨강-초록)
-  const saturation = 70;
-  const lightness = 50;
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+// 점수에 따른 색상 생성 (파란색에서 빨간색으로 히트맵)
+function scoreToHeatmap(score: number): string {
+  // score는 0-1 범위로 정규화
+  const normalizedScore = Math.max(0, Math.min(1, score));
+
+  // 파란색(0)에서 빨간색(1)으로 변환하는 히트맵
+  // 낮은 점수 = 파란색, 높은 점수 = 빨간색
+  let r, g, b;
+
+  if (normalizedScore < 0.5) {
+    // 파란색에서 초록색으로 (0.0 - 0.5)
+    const t = normalizedScore * 2;
+    r = Math.floor(t * 200); // 더 밝은 색상
+    g = Math.floor(t * 255);
+    b = Math.floor((1 - t) * 255);
+  } else {
+    // 초록색에서 빨간색으로 (0.5 - 1.0)
+    const t = (normalizedScore - 0.5) * 2;
+    r = Math.floor(200 + t * 55); // 더 밝은 빨간색
+    g = Math.floor((1 - t) * 200);
+    b = Math.floor((1 - t) * 100);
+  }
+
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 const SURFACE_OFFSET = 0.1;
@@ -42,6 +60,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
     setFlyToTarget,
     showOnlyFavorites,
     favorites,
+    setBodyPositions,
   } = useStore();
   const [exoplanets, setExoplanets] = useState<Planet[]>([]);
 
@@ -60,6 +79,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
           teq: p.teq,
           features: p.features,
         }));
+        console.log("Loaded planets:", planets.length);
         setExoplanets(planets);
       })
       .catch((err) => {
@@ -67,7 +87,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       });
   }, []);
 
-  const dotRadius = Math.max(0.03, radius * 0.002);
+  const dotRadius = Math.max(0.3, radius * 0.02); // 크기 증가
   const ringInner = dotRadius * 1.8;
   const ringOuter = dotRadius * 3.0;
 
@@ -77,7 +97,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
     return exoplanets
       .filter((p) => {
         // 임계값 필터
-        if (p.score < cut) return false;
+        if ((p.score || 0) < cut) return false;
         // 즐겨찾기 필터
         if (showOnlyFavorites && !favorites.has(p.id)) return false;
         return true;
@@ -85,10 +105,36 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       .filter((p) => p.ra !== undefined && p.dec !== undefined)
       .map((p) => {
         const [x, y, z] = sph2cart(p.ra!, p.dec!, r);
-        const color = new Color().setStyle(scoreToHSL(p.score || 0)).getStyle();
+        const color = scoreToHeatmap(p.score || 0);
         return { p, pos: [x, y, z] as [number, number, number], color };
       });
   }, [exoplanets, threshold, radius, showOnlyFavorites, favorites]);
+
+  // 외계행성 위치를 bodyPositions에 저장 (useEffect로 분리)
+  useEffect(() => {
+    const positions: Record<string, [number, number, number]> = {};
+    points.forEach(({ p, pos }) => {
+      positions[p.id] = pos;
+    });
+    setBodyPositions(positions);
+    console.log(
+      "Updated bodyPositions with exoplanets:",
+      Object.keys(positions).length,
+      "planets"
+    );
+  }, [points, setBodyPositions]);
+
+  console.log("Filtered points:", points.length, "threshold:", threshold);
+  console.log("Dot radius:", dotRadius);
+  console.log(
+    "Sample points:",
+    points.slice(0, 3).map((p) => ({
+      id: p.p.id,
+      score: p.p.score,
+      color: p.color,
+      pos: p.pos,
+    }))
+  );
 
   const selectPlanet = useCallback(
     (p: Planet) => {
@@ -99,14 +145,37 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
 
   const flyToPlanet = useCallback(
     (p: Planet) => {
-      if (!p.ra || !p.dec) return;
+      if (!p.ra || !p.dec) {
+        console.log("Cannot fly to planet - missing ra/dec:", p);
+        return;
+      }
+
+      console.log("Starting flyToPlanet for:", p.name);
       setSelectedId(p.id);
+
       // 카메라 거리는 반경 비례로 잡아줌
       const [x, y, z] = sph2cart(p.ra, p.dec, radius + SURFACE_OFFSET);
       const len = Math.hypot(x, y, z) || 1;
       const n: [number, number, number] = [x / len, y / len, z / len];
-      const dist = radius * 0.15;
-      setFlyToTarget([n[0] * dist, n[1] * dist, n[2] * dist]);
+      const dist = radius * 0.5; // 거리를 더 늘려서 행성을 더 잘 볼 수 있도록
+      const targetPos: [number, number, number] = [
+        n[0] * dist,
+        n[1] * dist,
+        n[2] * dist,
+      ];
+
+      console.log(
+        "Flying to exoplanet:",
+        p.name,
+        "planet position:",
+        [x, y, z],
+        "camera target:",
+        targetPos,
+        "distance:",
+        dist
+      );
+
+      setFlyToTarget(targetPos);
     },
     [radius, setSelectedId, setFlyToTarget]
   );
@@ -142,35 +211,37 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
     ringRef.current.scale.setScalar(s);
   });
 
+  console.log("Rendering points:", points.length, "dotRadius:", dotRadius);
+
   return (
     <>
-      <Instances limit={points.length || 1} key={points.length}>
-        <sphereGeometry args={[dotRadius, 16, 16]} />
-        <meshBasicMaterial vertexColors toneMapped={false} />
-        {points.map(({ p, pos, color }) => (
-          <Instance
-            key={p.id}
-            position={pos}
-            color={color}
-            onPointerOver={(e) => {
-              e.stopPropagation();
-              setHover(true);
-            }}
-            onPointerOut={(e) => {
-              e.stopPropagation();
-              setHover(false);
-            }}
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              selectPlanet(p);
-            }}
-            onDoubleClick={(e) => {
-              e.stopPropagation();
-              flyToPlanet(p);
-            }}
-          />
-        ))}
-      </Instances>
+      {points.map(({ p, pos, color }) => (
+        <mesh
+          key={p.id}
+          position={pos}
+          onPointerOver={(e) => {
+            e.stopPropagation();
+            setHover(true);
+          }}
+          onPointerOut={(e) => {
+            e.stopPropagation();
+            setHover(false);
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            console.log("Single click on exoplanet:", p.name);
+            selectPlanet(p);
+          }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            console.log("Double click on exoplanet:", p.name);
+            flyToPlanet(p);
+          }}
+        >
+          <sphereGeometry args={[dotRadius, 16, 16]} />
+          <meshBasicMaterial color={color} transparent opacity={0.8} />
+        </mesh>
+      ))}
 
       {selPos && (
         <mesh ref={ringRef} position={selPos}>

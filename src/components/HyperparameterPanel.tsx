@@ -53,7 +53,7 @@ export default function HyperparameterPanel() {
 
       {/* Content */}
       {isExpanded && (
-        <div className="px-4 pb-4 space-y-3 max-h-64 overflow-y-auto">
+        <div className="px-4 pb-4 space-y-3 max-h-48 overflow-y-auto">
           {/* Save Button */}
           <div className="pb-3 border-b border-white/10">
             <button

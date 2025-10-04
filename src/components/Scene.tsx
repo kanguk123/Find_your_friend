@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { Vector3, TextureLoader, BackSide, DirectionalLight } from "three";
+import { Vector3, TextureLoader, BackSide } from "three";
 import Link from "next/link";
 import SolarSystem from "./SolarSystem";
 import SolarSearchSidebar from "./SolarSearchSidebar";
@@ -12,12 +12,9 @@ import InfoPanel from "./InfoPanel";
 import Rocket from "./Rocket";
 import BlackHole from "./BlackHole";
 import GameHUD from "./GameHUD";
-import GlobeBase from "./GlobeBase";
-import PlanetsPoints from "./PlanetsPoints";
 import ModeSwitch from "./ModeSwitch";
 import PlanetCard from "./PlanetCard";
 import FavoriteFilter from "./FavoriteFilter";
-import CSVUploader from "./CSVUploader";
 import HyperparameterPanel from "./HyperparameterPanel";
 import ModelAccuracy from "./ModelAccuracy";
 import ExoplanetLoader from "./ExoplanetLoader";
@@ -39,20 +36,6 @@ function Skybox() {
   );
 }
 
-function CameraLight() {
-  const { camera } = useThree();
-  const lightRef = useRef<DirectionalLight>(null);
-
-  useFrame((state, delta) => {
-    if (lightRef.current) {
-      // 조명을 카메라 위치에 배치
-      lightRef.current.position.copy(camera.position);
-    }
-  });
-
-  return <directionalLight ref={lightRef} intensity={1.5} color="#ffffff" />;
-}
-
 function CameraRig() {
   const { camera, controls } = useThree();
   const {
@@ -64,51 +47,53 @@ function CameraRig() {
     bodyPositions,
   } = useStore();
 
-  useFrame((state, delta) => {
-    // Expert 모드에서 WASD 키보드로 카메라 시점 회전
-    if (mode === "expert" && controls && !flyToTarget) {
-      const rotateSpeed = 2 * delta;
-
-      const target = (controls as any).target as Vector3;
+  useFrame(() => {
+    // Player 모드에서 WASD 키보드로 카메라 이동 (Expert 모드와 동일)
+    if (mode === "player" && controls && !flyToTarget) {
+      const moveSpeed = 0.05; // Expert 모드와 동일한 이동 속도
+      const target = (controls as unknown as { target: Vector3 }).target;
       const cameraPos = camera.position;
 
       // 카메라에서 타겟으로의 방향 벡터
       const direction = new Vector3().subVectors(target, cameraPos);
-      const distance = direction.length();
 
       let shouldUpdate = false;
 
-      // W/S: 상하 회전 (pitch)
+      // W/S: 앞뒤 이동
       if (keysPressed["w"] || keysPressed["arrowup"]) {
-        const up = new Vector3(0, 1, 0);
-        const right = new Vector3().crossVectors(direction, up).normalize();
-        direction.applyAxisAngle(right, rotateSpeed);
+        direction.normalize().multiplyScalar(moveSpeed);
+        camera.position.add(direction);
+        target.add(direction);
         shouldUpdate = true;
       }
       if (keysPressed["s"] || keysPressed["arrowdown"]) {
-        const up = new Vector3(0, 1, 0);
-        const right = new Vector3().crossVectors(direction, up).normalize();
-        direction.applyAxisAngle(right, -rotateSpeed);
+        direction.normalize().multiplyScalar(-moveSpeed);
+        camera.position.add(direction);
+        target.add(direction);
         shouldUpdate = true;
       }
 
-      // A/D: 좌우 회전 (yaw)
+      // A/D: 좌우 이동
       if (keysPressed["a"] || keysPressed["arrowleft"]) {
         const up = new Vector3(0, 1, 0);
-        direction.applyAxisAngle(up, rotateSpeed);
+        const right = new Vector3().crossVectors(direction, up).normalize();
+        right.multiplyScalar(moveSpeed);
+        camera.position.add(right);
+        target.add(right);
         shouldUpdate = true;
       }
       if (keysPressed["d"] || keysPressed["arrowright"]) {
         const up = new Vector3(0, 1, 0);
-        direction.applyAxisAngle(up, -rotateSpeed);
+        const right = new Vector3().crossVectors(direction, up).normalize();
+        right.multiplyScalar(-moveSpeed);
+        camera.position.add(right);
+        target.add(right);
         shouldUpdate = true;
       }
 
-      // 키 입력이 있을 때만 타겟 업데이트
+      // 키 입력이 있을 때만 컨트롤 업데이트
       if (shouldUpdate) {
-        direction.normalize().multiplyScalar(distance);
-        target.copy(cameraPos).add(direction);
-        (controls as any).update();
+        (controls as unknown as { update: () => void }).update();
       }
     }
 
@@ -121,10 +106,23 @@ function CameraRig() {
     const cur = camera.position;
     const [tx, ty, tz] = flyToTarget;
 
-    // 카메라 이동
-    cur.x += (tx - cur.x) * 0.08;
-    cur.y += (ty - cur.y) * 0.08;
-    cur.z += (tz - cur.z) * 0.08;
+    // 카메라 이동 (부드러운 이동을 위해 속도 조정)
+    const moveSpeed = 0.05; // 0.08에서 0.05로 감소
+    cur.x += (tx - cur.x) * moveSpeed;
+    cur.y += (ty - cur.y) * moveSpeed;
+    cur.z += (tz - cur.z) * moveSpeed;
+
+    // 디버깅 로그 (외계행성 이동 확인용)
+    if (selectedId && bodyPositions[selectedId]) {
+      console.log(
+        "Moving to exoplanet:",
+        selectedId,
+        "current pos:",
+        [cur.x, cur.y, cur.z],
+        "target pos:",
+        [tx, ty, tz]
+      );
+    }
 
     if (mode === "player") {
       // Player 모드: 선택된 행성을 바라봄
@@ -135,14 +133,21 @@ function CameraRig() {
         camera.lookAt(0, 0, 0);
       }
 
-      // 도착 확인
-      if (Math.hypot(cur.x - tx, cur.y - ty, cur.z - tz) < 0.01) {
+      // 도착 확인 (외계행성은 더 큰 임계값 사용)
+      const distance = Math.hypot(cur.x - tx, cur.y - ty, cur.z - tz);
+      const threshold = selectedId && bodyPositions[selectedId] ? 2.0 : 0.1; // 외계행성은 2.0, 태양계 행성은 0.1
+
+      if (distance < threshold) {
         camera.position.set(tx, ty, tz);
         setFlyToTarget(undefined);
+        console.log("Arrived at target:", selectedId, "distance:", distance);
       }
     } else if (mode === "expert" && controls) {
       // Expert 모드: OrbitControls 타겟을 행성으로 설정
-      const orbitControls = controls as any;
+      const orbitControls = controls as unknown as {
+        target: Vector3;
+        update: () => void;
+      };
 
       // 항상 선택된 행성 또는 태양을 바라봄
       if (selectedId && bodyPositions[selectedId]) {
@@ -154,9 +159,62 @@ function CameraRig() {
 
       orbitControls.update();
 
-      // 도착 확인
+      // Expert 모드에서 WASD 키보드로 카메라 이동 (Player 모드와 동일)
+      if (!flyToTarget) {
+        const moveSpeed = 0.05; // Player 모드와 동일한 이동 속도
+
+        const target = orbitControls.target;
+        const cameraPos = camera.position;
+
+        // 카메라에서 타겟으로의 방향 벡터
+        const direction = new Vector3().subVectors(target, cameraPos);
+        const distance = direction.length();
+
+        let shouldUpdate = false;
+
+        // W/S: 앞뒤 이동
+        if (keysPressed["w"] || keysPressed["arrowup"]) {
+          direction.normalize().multiplyScalar(moveSpeed);
+          camera.position.add(direction);
+          target.add(direction);
+          shouldUpdate = true;
+        }
+        if (keysPressed["s"] || keysPressed["arrowdown"]) {
+          direction.normalize().multiplyScalar(-moveSpeed);
+          camera.position.add(direction);
+          target.add(direction);
+          shouldUpdate = true;
+        }
+
+        // A/D: 좌우 이동
+        if (keysPressed["a"] || keysPressed["arrowleft"]) {
+          const up = new Vector3(0, 1, 0);
+          const right = new Vector3().crossVectors(direction, up).normalize();
+          right.multiplyScalar(moveSpeed);
+          camera.position.add(right);
+          target.add(right);
+          shouldUpdate = true;
+        }
+        if (keysPressed["d"] || keysPressed["arrowright"]) {
+          const up = new Vector3(0, 1, 0);
+          const right = new Vector3().crossVectors(direction, up).normalize();
+          right.multiplyScalar(-moveSpeed);
+          camera.position.add(right);
+          target.add(right);
+          shouldUpdate = true;
+        }
+
+        // 키 입력이 있을 때만 컨트롤 업데이트
+        if (shouldUpdate) {
+          orbitControls.update();
+        }
+      }
+
+      // 도착 확인 (외계행성은 더 큰 임계값 사용)
       const distance = Math.hypot(cur.x - tx, cur.y - ty, cur.z - tz);
-      if (distance < 0.1) {
+      const threshold = selectedId && bodyPositions[selectedId] ? 2.0 : 0.2; // 외계행성은 2.0, 태양계 행성은 0.2
+
+      if (distance < threshold) {
         camera.position.set(tx, ty, tz);
 
         // 도착 후에도 OrbitControls target을 행성에 유지
@@ -167,6 +225,12 @@ function CameraRig() {
 
         orbitControls.update();
         setFlyToTarget(undefined);
+        console.log(
+          "Arrived at target (Expert mode):",
+          selectedId,
+          "distance:",
+          distance
+        );
       }
     }
   });
@@ -247,7 +311,13 @@ export default function Scene() {
       </div>
 
       {/* 좌측 상단 - Search planets & Favorites */}
-      <div className="pointer-events-none absolute top-16 left-3 z-50 w-80 space-y-3">
+      <div
+        className={`pointer-events-none absolute top-16 left-3 z-50 w-80 overflow-y-auto space-y-3 ${
+          mode === "expert"
+            ? "max-h-[calc(100vh-12rem)]" // Expert 모드에서는 더 작은 높이
+            : "max-h-[calc(100vh-8rem)]" // Player 모드에서는 기본 높이
+        }`}
+      >
         <div className="pointer-events-auto relative z-50">
           <SolarSearchSidebar />
         </div>
@@ -277,8 +347,8 @@ export default function Scene() {
         </div>
       </div>
 
-      {/* 좌측 하단 - Planet 정보 */}
-      <div className="pointer-events-none absolute bottom-3 left-3 z-50 space-y-3">
+      {/* 우측 하단 - Planet 정보 (모든 모드에서 표시) */}
+      <div className="pointer-events-none absolute bottom-3 right-3 z-40 space-y-3">
         <div className="pointer-events-auto bg-black/60 border border-white/15 rounded-xl p-3 backdrop-blur-sm">
           <InfoPanel />
         </div>
@@ -294,9 +364,9 @@ export default function Scene() {
         )}
       </div>
 
-      {/* Expert 모드 전용 패널들 - 우측 하단 */}
+      {/* Expert 모드 전용 패널들 - 우측 상단 */}
       {mode === "expert" && (
-        <div className="pointer-events-none absolute bottom-3 right-3 z-50 w-80 space-y-3 max-h-[calc(100vh-1.5rem)] overflow-y-auto">
+        <div className="pointer-events-none absolute top-16 right-3 z-50 w-80 space-y-3 max-h-[calc(100vh-16rem)] overflow-y-auto">
           <div className="pointer-events-auto">
             <HyperparameterPanel />
           </div>
@@ -357,17 +427,20 @@ export default function Scene() {
       >
         <ambientLight intensity={0.06} />
 
-        {/* Expert 모드에서는 OrbitControls 사용 */}
-        {mode === "expert" && (
-          <OrbitControls
-            enablePan={false}
-            enableZoom={true}
-            enableRotate={true}
-            minDistance={0.1}
-            maxDistance={500}
-            zoomSpeed={1.5}
-          />
-        )}
+        {/* 모든 모드에서 OrbitControls 사용 */}
+        <OrbitControls
+          enablePan={true}
+          enableZoom={true}
+          enableRotate={true}
+          minDistance={0.1}
+          maxDistance={500}
+          zoomSpeed={1.0}
+          rotateSpeed={1.0}
+          panSpeed={1.0}
+          dampingFactor={0.02}
+          enableDamping={false}
+          autoRotate={false}
+        />
 
         <Suspense fallback={null}>
           <Skybox />
