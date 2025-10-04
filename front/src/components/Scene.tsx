@@ -85,7 +85,11 @@ function CameraRig() {
 
     // Player 모드와 Expert 모드에서 카메라 제어
     // Expert 모드에서는 flyToTarget이 있어도 키보드 이동 허용
-    if ((mode === "player" || mode === "expert") && controls && (mode === "expert" || !flyToTarget)) {
+    if (
+      (mode === "player" || mode === "expert") &&
+      controls &&
+      (mode === "expert" || !flyToTarget)
+    ) {
       const orbitControls = controls as unknown as {
         target: Vector3;
         update: () => void;
@@ -235,7 +239,7 @@ function CameraRig() {
         const [px, py, pz] = bodyPositions[selectedId];
 
         // 외계행성인지 확인 (planet-로 시작하면 외계행성)
-        const isExoplanet = selectedId.startsWith('planet-');
+        const isExoplanet = selectedId.startsWith("planet-");
 
         if (isExoplanet) {
           // 외계행성: 행성을 바라봄
@@ -317,7 +321,10 @@ export default function Scene() {
         if (flyToTarget || isCameraMoving) {
           setFlyToTarget(undefined);
           setIsCameraMoving(false);
-          console.log("ESC 1단계: 카메라 해제", { flyToTarget, isCameraMoving });
+          console.log("ESC 1단계: 카메라 해제", {
+            flyToTarget,
+            isCameraMoving,
+          });
           return;
         }
 
@@ -397,7 +404,17 @@ export default function Scene() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [setFlyToTarget, setSelectedId, setKeysPressed, flyToTarget, isCameraMoving, selectedId, mode, setShowPlanetCard, setSelectedPlanetData]);
+  }, [
+    setFlyToTarget,
+    setSelectedId,
+    setKeysPressed,
+    flyToTarget,
+    isCameraMoving,
+    selectedId,
+    mode,
+    setShowPlanetCard,
+    setSelectedPlanetData,
+  ]);
 
   return (
     <div className="relative h-screen w-full">
@@ -426,12 +443,12 @@ export default function Scene() {
           <PlanetListPanel />
         </div>
         <div className="pointer-events-auto relative z-30 mt-2">
-            <button
-                onClick={() => bumpReset()}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-black/60 border border-white/15 hover:bg-white/10 whitespace-nowrap"
-            >
-                Reset to Earth
-            </button>
+          <button
+            onClick={() => bumpReset()}
+            className="w-full px-3 py-2 text-sm rounded-lg bg-black/60 border border-white/15 hover:bg-white/10 whitespace-nowrap"
+          >
+            Reset to Earth
+          </button>
         </div>
       </div>
 
@@ -465,7 +482,10 @@ export default function Scene() {
             <kbd className="px-1.5 py-0.5 bg-white/20 rounded border border-white/30 font-mono text-[10px] sm:text-xs">
               ESC
             </kbd>{" "}
-            to {flyToTarget || isCameraMoving ? "release camera" : "deselect planet"}
+            to{" "}
+            {flyToTarget || isCameraMoving
+              ? "release camera"
+              : "deselect planet"}
           </div>
         )}
       </div>

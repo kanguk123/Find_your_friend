@@ -63,6 +63,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
     isCameraMoving,
     setIsCameraMoving,
     planets,
+    mode,
   } = useStore();
   // useStore에서 외계행성 데이터 가져오기
   const exoplanets = useMemo(
@@ -114,6 +115,11 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       }
 
       // 두 번째 클릭: 카메라 이동 (이미 선택된 행성을 다시 클릭)
+      // player 모드에서는 행성으로 이동하지 않음
+      if (mode === "player") {
+        return;
+      }
+
       if (isCameraMoving) {
         // 이미 카메라가 이동 중이면 무시
         return;
