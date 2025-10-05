@@ -13,6 +13,13 @@ export type Planet = {
   dec?: number;
   teq?: number;
   score?: number;
+  disposition?: string;
+  distance?: number;
+  coordinates_3d?: {
+    x: number;
+    y: number;
+    z: number;
+  };
   // Expert 모드용 피처 값들
   features?: {
     mass?: number;

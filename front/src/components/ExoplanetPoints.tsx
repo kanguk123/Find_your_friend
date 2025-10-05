@@ -18,6 +18,26 @@ function sph2cart(
   return [x, y, z];
 }
 
+// 행성의 3D 좌표를 계산하는 유틸 함수 (중복 제거)
+function getPlanetPosition(
+  planet: Planet,
+  radius: number,
+  surfaceOffset: number
+): [number, number, number] {
+  // coordinates_3d가 있으면 그대로 사용
+  if (planet.coordinates_3d) {
+    const { x, y, z } = planet.coordinates_3d;
+    return [x, y, z];
+  }
+
+  // coordinates_3d가 없으면 ra/dec와 distance를 사용하여 계산
+  const actualRadius = planet.distance
+    ? Math.max(50, Math.min(500, planet.distance * 10))
+    : radius + surfaceOffset;
+
+  return sph2cart(planet.ra!, planet.dec!, actualRadius);
+}
+
 // 점수에 따른 색상 생성 (파란색에서 빨간색으로 히트맵)
 function scoreToHeatmap(score: number): string {
   // score는 0-1 범위로 정규화
@@ -84,27 +104,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       })
       .filter((p) => p.ra !== undefined && p.dec !== undefined)
       .map((p) => {
-        // coordinates_3d가 있으면 그대로 사용
-        let x, y, z;
-        const coords3d = (p as Record<string, any>).coordinates_3d;
-        if (
-          coords3d &&
-          typeof coords3d.x === "number" &&
-          typeof coords3d.y === "number" &&
-          typeof coords3d.z === "number"
-        ) {
-          x = coords3d.x;
-          y = coords3d.y;
-          z = coords3d.z;
-        } else {
-          // coordinates_3d가 없으면 ra/dec와 distance를 사용하여 계산
-          // distance가 없으면 랜덤한 거리 사용 (radius의 0.5배~2배)
-          const distance = (p as Record<string, any>).distance;
-          const actualRadius = distance
-            ? Math.max(50, Math.min(500, distance * 10)) // distance를 적절한 스케일로 변환
-            : r * (0.5 + Math.random() * 1.5); // 랜덤 거리
-          [x, y, z] = sph2cart(p.ra!, p.dec!, actualRadius);
-        }
+        const [x, y, z] = getPlanetPosition(p, radius, SURFACE_OFFSET);
         const color = scoreToHeatmap(p.score || 0);
         return { p, pos: [x, y, z] as [number, number, number], color };
       });
@@ -139,25 +139,8 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
           // 무조건 1코인
           collectCoin();
 
-          // 행성 위치 계산 - coordinates_3d가 있으면 그대로 사용
-          let px, py, pz;
-          const coords3d = (p as Record<string, any>).coordinates_3d;
-          if (
-            coords3d &&
-            typeof coords3d.x === "number" &&
-            typeof coords3d.y === "number" &&
-            typeof coords3d.z === "number"
-          ) {
-            px = coords3d.x;
-            py = coords3d.y;
-            pz = coords3d.z;
-          } else {
-            const distance = (p as Record<string, any>).distance;
-            const actualRadius = distance
-              ? Math.max(50, Math.min(500, distance * 10))
-              : radius + SURFACE_OFFSET;
-            [px, py, pz] = sph2cart(p.ra!, p.dec!, actualRadius);
-          }
+          // 행성 위치 계산
+          const [px, py, pz] = getPlanetPosition(p, radius, SURFACE_OFFSET);
 
           // 플로팅 텍스트 표시
           addFloatingText("+1 🪙", [px, py, pz]);
@@ -283,25 +266,8 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       setRocketCameraTarget(p.id);
       console.log("로켓 카메라 모드로 전환:", p.name);
 
-      // coordinates_3d가 있으면 그대로 사용, 없으면 ra/dec와 distance로 계산
-      let x, y, z;
-      const coords3d = (p as Record<string, any>).coordinates_3d;
-      if (
-        coords3d &&
-        typeof coords3d.x === "number" &&
-        typeof coords3d.y === "number" &&
-        typeof coords3d.z === "number"
-      ) {
-        x = coords3d.x;
-        y = coords3d.y;
-        z = coords3d.z;
-      } else {
-        const distance = (p as Record<string, any>).distance;
-        const actualRadius = distance
-          ? Math.max(50, Math.min(500, distance * 10))
-          : radius + SURFACE_OFFSET;
-        [x, y, z] = sph2cart(p.ra, p.dec, actualRadius);
-      }
+      // 행성 위치 계산
+      const [x, y, z] = getPlanetPosition(p, radius, SURFACE_OFFSET);
 
       const len = Math.hypot(x, y, z) || 1;
       const n: [number, number, number] = [x / len, y / len, z / len];
