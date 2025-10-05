@@ -111,7 +111,10 @@ function CameraRig() {
       // 키보드 입력에 따른 카메라/타겟 이동 플래그
       const moveSpeed = 0.5; // 이동 속도
 
-      if (mode === "expert") {
+      // input이 포커스되어 있으면 키보드 입력 무시
+      const isInputFocused = document.body.dataset.inputFocused === 'true';
+
+      if (mode === "expert" && !isInputFocused) {
         // Expert 모드에서 선택된 행성이 있을 때
         if (selectedId && bodyPositions[selectedId]) {
           // 행성을 중심으로 회전하도록 target 고정
@@ -152,7 +155,7 @@ function CameraRig() {
             target.x += moveSpeed;
           }
         }
-      } else {
+      } else if (mode === "player" && !isInputFocused) {
         // Player 모드: 기존 상대 이동
         // W/S: 앞뒤 이동 (Panning)
         if (keysPressed["w"] || keysPressed["arrowup"]) {
@@ -293,6 +296,12 @@ export default function Scene() {
   // 키보드 입력 처리
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // input이나 textarea가 포커스되어 있으면 키보드 이벤트 무시
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
       // ESC 키로 카메라 고정 해제 및 선택 해제 (2단계)
       if (e.key === "Escape") {
         const { setIsCameraMoving } = useStore.getState();
@@ -361,6 +370,12 @@ export default function Scene() {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      // input이나 textarea가 포커스되어 있으면 키보드 이벤트 무시
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
       const key = e.key.toLowerCase();
       if (
         [
