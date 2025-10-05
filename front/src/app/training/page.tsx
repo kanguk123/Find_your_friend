@@ -310,9 +310,8 @@ export default function TrainingPage() {
             2. AI model processes each row and adds predictions:
           </p>
           <ul className="text-sm text-white/70 ml-4 space-y-1">
-            <li>• <code className="text-blue-300">ai_prediction</code>: CONFIRMED or FALSE POSITIVE</li>
-            <li>• <code className="text-blue-300">ai_probability</code>: Confidence score (0.0-1.0)</li>
-            <li>• <code className="text-blue-300">ai_confidence</code>: high, medium, or low</li>
+            <li>• <code className="text-blue-300">ai_prediction</code>: CONFIRMED or FALSE POSITIVE (first column)</li>
+            <li>• <code className="text-blue-300">ai_probability</code>: Confidence score (0.0-1.0) (second column)</li>
           </ul>
           <p className="text-sm text-white/70 mt-2">
             3. Download the labeled CSV with prediction results

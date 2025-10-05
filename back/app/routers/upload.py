@@ -263,9 +263,14 @@ async def identify_planets_from_csv(
     # ============================================
     # 5. APPEND PREDICTIONS TO DATAFRAME
     # ============================================
-    df['ai_prediction'] = predictions
-    df['ai_probability'] = probabilities
-    df['ai_confidence'] = confidence_levels
+    # Create a new DataFrame with predictions first, then original data
+    prediction_df = pd.DataFrame({
+        'ai_prediction': predictions,
+        'ai_probability': probabilities
+    })
+
+    # Concatenate prediction columns at the front, then original data
+    df = pd.concat([prediction_df, df], axis=1)
 
     logger.info(
         f"[SUMMARY] Processing complete: "
