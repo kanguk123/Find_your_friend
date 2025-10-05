@@ -34,7 +34,7 @@ function Skybox() {
 }
 
 function CameraRig() {
-  const { camera, controls } = useThree();
+  const { camera, controls, gl } = useThree();
   const {
     flyToTarget,
     setFlyToTarget,
@@ -71,6 +71,13 @@ function CameraRig() {
   }, [controls]);
 
   useFrame(() => {
+    // 디버그: keysPressed 상태 확인
+    const currentKeysPressed = useStore.getState().keysPressed;
+    const anyKey = Object.values(currentKeysPressed).some(v => v);
+    if (anyKey && mode === "expert") {
+      console.log("useFrame - keysPressed:", currentKeysPressed);
+    }
+
     // 카메라 위치 직접 설정 (초기화)
     if (cameraPosition) {
       const [x, y, z] = cameraPosition;
@@ -114,51 +121,81 @@ function CameraRig() {
       // input이 포커스되어 있으면 키보드 입력 무시
       const isInputFocused = document.body.dataset.inputFocused === 'true';
 
+      // useFrame 내부에서는 최신 상태를 직접 가져와야 함
+      const currentKeysPressed = useStore.getState().keysPressed;
+
+      // 디버그: 어떤 키가 눌려있는지 확인
+      const anyKeyPressed = Object.values(currentKeysPressed).some(v => v);
+      if (anyKeyPressed) {
+        console.log("Keys pressed:", currentKeysPressed, "mode:", mode, "isInputFocused:", isInputFocused, "dataset.inputFocused:", document.body.dataset.inputFocused);
+      }
+
       if (mode === "expert" && !isInputFocused) {
-        // Expert 모드에서 선택된 행성이 있을 때
-        if (selectedId && bodyPositions[selectedId]) {
-          // 행성을 중심으로 회전하도록 target 고정
-          target.copy(centerPoint);
+        // Expert 모드: 로켓처럼 카메라 방향 기준으로 이동
 
-          // WASD로 카메라만 이동 (행성 중심 유지)
-          if (keysPressed["w"] || keysPressed["arrowup"]) {
-            camera.position.z += moveSpeed;
-          }
-          if (keysPressed["s"] || keysPressed["arrowdown"]) {
-            camera.position.z -= moveSpeed;
-          }
-          if (keysPressed["a"] || keysPressed["arrowleft"]) {
-            camera.position.x -= moveSpeed;
-          }
-          if (keysPressed["d"] || keysPressed["arrowright"]) {
-            camera.position.x += moveSpeed;
-          }
-        } else {
-          // 선택된 행성이 없으면 태양 중심으로
-          target.set(0, 0, 0);
+        // 카메라가 바라보는 방향 벡터
+        const forward = new Vector3()
+          .subVectors(target, cameraPos)
+          .normalize();
 
-          // X, Z축 절대 이동 (카메라와 타겟 함께 이동)
-          if (keysPressed["w"] || keysPressed["arrowup"]) {
-            camera.position.z += moveSpeed;
-            target.z += moveSpeed;
-          }
-          if (keysPressed["s"] || keysPressed["arrowdown"]) {
-            camera.position.z -= moveSpeed;
-            target.z -= moveSpeed;
-          }
-          if (keysPressed["a"] || keysPressed["arrowleft"]) {
-            camera.position.x -= moveSpeed;
-            target.x -= moveSpeed;
-          }
-          if (keysPressed["d"] || keysPressed["arrowright"]) {
-            camera.position.x += moveSpeed;
-            target.x += moveSpeed;
-          }
+        // 카메라의 오른쪽 방향 벡터 (forward와 up의 외적)
+        const up = new Vector3(0, 1, 0);
+        const right = new Vector3()
+          .crossVectors(forward, up)
+          .normalize();
+
+        let moved = false;
+
+        // 이동 벡터 누적
+        const totalMovement = new Vector3();
+
+        // W/S: 카메라가 바라보는 방향으로 앞뒤 이동
+        if (currentKeysPressed["w"] || currentKeysPressed["arrowup"]) {
+          totalMovement.add(forward.clone().multiplyScalar(moveSpeed));
+          moved = true;
         }
+        if (currentKeysPressed["s"] || currentKeysPressed["arrowdown"]) {
+          totalMovement.add(forward.clone().multiplyScalar(-moveSpeed));
+          moved = true;
+        }
+
+        // A/D: 카메라 기준 좌우 이동
+        if (currentKeysPressed["a"] || currentKeysPressed["arrowleft"]) {
+          totalMovement.add(right.clone().multiplyScalar(-moveSpeed));
+          moved = true;
+        }
+        if (currentKeysPressed["d"] || currentKeysPressed["arrowright"]) {
+          totalMovement.add(right.clone().multiplyScalar(moveSpeed));
+          moved = true;
+        }
+
+        // Q/E: 상하 이동
+        if (currentKeysPressed["q"]) {
+          totalMovement.add(up.clone().multiplyScalar(-moveSpeed));
+          moved = true;
+        }
+        if (currentKeysPressed["e"]) {
+          totalMovement.add(up.clone().multiplyScalar(moveSpeed));
+          moved = true;
+        }
+
+        if (moved) {
+          // 카메라와 타겟을 동시에 이동
+          const newCameraPos = cameraPos.clone().add(totalMovement);
+          const newTarget = target.clone().add(totalMovement);
+
+          camera.position.copy(newCameraPos);
+          target.copy(newTarget);
+
+          console.log("Expert mode camera moved:", newCameraPos, "target:", newTarget);
+        }
+
+        // Expert 모드에서는 항상 OrbitControls 업데이트
+        orbitControls.update();
       } else if (mode === "player" && !isInputFocused) {
         // Player 모드: 기존 상대 이동
         // W/S: 앞뒤 이동 (Panning)
-        if (keysPressed["w"] || keysPressed["arrowup"]) {
+        if (currentKeysPressed["w"] || currentKeysPressed["arrowup"]) {
           const direction = new Vector3()
             .subVectors(target, cameraPos)
             .normalize()
@@ -166,7 +203,7 @@ function CameraRig() {
           camera.position.add(direction);
           target.add(direction);
         }
-        if (keysPressed["s"] || keysPressed["arrowdown"]) {
+        if (currentKeysPressed["s"] || currentKeysPressed["arrowdown"]) {
           const direction = new Vector3()
             .subVectors(target, cameraPos)
             .normalize()
@@ -176,7 +213,7 @@ function CameraRig() {
         }
 
         // A/D: 좌우 이동 (Panning)
-        if (keysPressed["a"] || keysPressed["arrowleft"]) {
+        if (currentKeysPressed["a"] || currentKeysPressed["arrowleft"]) {
           const direction = new Vector3().subVectors(target, cameraPos);
           const up = new Vector3(0, 1, 0);
           const right = new Vector3()
@@ -186,7 +223,7 @@ function CameraRig() {
           camera.position.add(right);
           target.add(right);
         }
-        if (keysPressed["d"] || keysPressed["arrowright"]) {
+        if (currentKeysPressed["d"] || currentKeysPressed["arrowright"]) {
           const direction = new Vector3().subVectors(target, cameraPos);
           const up = new Vector3(0, 1, 0);
           const right = new Vector3()
@@ -196,13 +233,15 @@ function CameraRig() {
           camera.position.add(right);
           target.add(right);
         }
+
+        // Player 모드에서도 업데이트
+        orbitControls.update();
       }
 
-      // 키보드 이동 중이 아닐 때는 이미 위에서 설정한 target 유지
-      // (선택된 행성이 있으면 행성, 없으면 태양)
-
-      // Damping을 사용하므로 항상 OrbitControls를 업데이트해야 합니다.
-      orbitControls.update();
+      // 키보드 이동 중이 아닐 때만 OrbitControls 업데이트
+      if (mode !== "expert" && mode !== "player") {
+        orbitControls.update();
+      }
     }
 
     // flyToTarget이 없으면 리턴
@@ -295,6 +334,16 @@ export default function Scene() {
 
   // 키보드 입력 처리
   useEffect(() => {
+    // 초기값 설정
+    if (!document.body.dataset.inputFocused) {
+      document.body.dataset.inputFocused = 'false';
+    }
+
+    // Canvas 클릭 시 input focus 해제
+    const handleCanvasClick = () => {
+      document.body.dataset.inputFocused = 'false';
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // input이나 textarea가 포커스되어 있으면 키보드 이벤트 무시
       const target = e.target as HTMLElement;
@@ -358,6 +407,8 @@ export default function Scene() {
           "a",
           "s",
           "d",
+          "q",
+          "e",
           "arrowup",
           "arrowdown",
           "arrowleft",
@@ -365,6 +416,7 @@ export default function Scene() {
         ].includes(key)
       ) {
         e.preventDefault();
+        console.log("Key pressed:", key, "mode:", mode);
         setKeysPressed(key, true);
       }
     };
@@ -383,6 +435,8 @@ export default function Scene() {
           "a",
           "s",
           "d",
+          "q",
+          "e",
           "arrowup",
           "arrowdown",
           "arrowleft",
@@ -395,9 +449,12 @@ export default function Scene() {
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("click", handleCanvasClick);
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("click", handleCanvasClick);
     };
   }, [
     setFlyToTarget,
@@ -591,8 +648,8 @@ export default function Scene() {
           zoomSpeed={1.0}
           rotateSpeed={1.0}
           panSpeed={1.0}
-          dampingFactor={0.02}
-          enableDamping={true}
+          dampingFactor={mode === "expert" ? 0 : 0.02}
+          enableDamping={mode !== "expert"}
           autoRotate={false}
         />
 

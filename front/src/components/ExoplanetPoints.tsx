@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect } from "react";
+import { useThree, useFrame } from "@react-three/fiber";
 import { useStore, type Planet, type Vec3 } from "@/state/useStore";
 import { ExoplanetClickHandler } from "@/utils/PlanetClickHandler";
 
@@ -65,6 +66,7 @@ function scoreToHeatmap(score: number): string {
 }
 
 const SURFACE_OFFSET = 0.1;
+const MAX_RENDER_DISTANCE = 50; // 카메라로부터 최대 렌더링 거리
 
 export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
   const {
@@ -83,6 +85,8 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
     collectedPlanets,
     addCollectedPlanet,
   } = useStore();
+  const { camera } = useThree();
+
   // useStore에서 외계행성 데이터 가져오기
   const exoplanets = useMemo(
     () => planets.filter((p) => p.ra !== undefined && p.dec !== undefined),
@@ -91,9 +95,10 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
 
   const dotRadius = Math.max(0.3, radius * 0.0005); // 크기를 1/10로 축소
 
-  const points = useMemo(() => {
+  const allPoints = useMemo(() => {
     const cut = threshold / 100;
     const r = radius + SURFACE_OFFSET;
+
     return exoplanets
       .filter((p) => {
         // 임계값 필터
@@ -113,11 +118,11 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
   // 외계행성 위치를 bodyPositions에 저장 (useEffect로 분리)
   useEffect(() => {
     const positions: Record<string, [number, number, number]> = {};
-    points.forEach(({ p, pos }) => {
+    allPoints.forEach(({ p, pos }) => {
       positions[p.id] = pos;
     });
     setBodyPositions(positions);
-  }, [points, setBodyPositions]);
+  }, [allPoints, setBodyPositions]);
 
   const handlePlanetClick = useCallback(
     (p: Planet) => {
@@ -326,7 +331,15 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
 
   return (
     <>
-      {points.map(({ p, pos, color }) => {
+      {allPoints.map(({ p, pos, color }) => {
+        // 카메라 거리 체크 (렌더링 시점에 실시간 계산)
+        const dx = pos[0] - camera.position.x;
+        const dy = pos[1] - camera.position.y;
+        const dz = pos[2] - camera.position.z;
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        if (distance > MAX_RENDER_DISTANCE) return null;
+
         const clickHandler = new ExoplanetClickHandler();
         const visualState = clickHandler.getVisualState(p);
         const isSelected = visualState.isSelected;

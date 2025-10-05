@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import type { Mesh } from "three";
 import { Color } from "three";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Instances, Instance } from "@react-three/drei";
 import { useStore } from "@/state/useStore";
 import type { Planet } from "@/types";
@@ -14,19 +14,22 @@ const RING_SEGMENTS = 64;
 const RING_ROT_SPEED = 1.2;
 const RING_PULSE_SPEED = 0.004;
 const RING_PULSE_RANGE = 0.05;
+const MAX_RENDER_DISTANCE = 50; // 카메라로부터 최대 렌더링 거리
 
 type Vec3 = [number, number, number];
 
 export default function PlanetsPoints({ radius = 20 }: { radius?: number }) {
     const { planets, threshold, selectedId, setSelectedId, setFlyToTarget, showOnlyFavorites, favorites } = useStore();
+    const { camera } = useThree();
 
     const dotRadius = Math.max(0.02, radius * 0.0014);     // 반경 비례 점 크기
     const ringInner = dotRadius * 1.6;
     const ringOuter = dotRadius * 2.6;
 
-    const points = useMemo(() => {
+    const allPoints = useMemo(() => {
         const cut = threshold / 100;
         const r = radius + SURFACE_OFFSET;
+
         return planets
             .filter((p) => {
                 // 임계값 필터
@@ -87,20 +90,30 @@ export default function PlanetsPoints({ radius = 20 }: { radius?: number }) {
 
     return (
         <>
-            <Instances limit={points.length || 1} key={points.length}>
+            <Instances limit={allPoints.length || 1} key={allPoints.length}>
                 <sphereGeometry args={[dotRadius, 16, 16]} />
                 <meshBasicMaterial vertexColors toneMapped={false} />
-                {points.map(({ p, pos, color }) => (
-                    <Instance
-                        key={p.id}
-                        position={pos}
-                        color={color}
-                        onPointerOver={(e) => { e.stopPropagation(); setHover(true); }}
-                        onPointerOut={(e) => { e.stopPropagation(); setHover(false); }}
-                        onPointerDown={(e) => { e.stopPropagation(); selectPlanet(p); }}
-                        onClick={(e) => { e.stopPropagation(); selectPlanet(p); }}
-                    />
-                ))}
+                {allPoints.map(({ p, pos, color }) => {
+                    // 카메라 거리 체크 (렌더링 시점에 실시간 계산)
+                    const dx = pos[0] - camera.position.x;
+                    const dy = pos[1] - camera.position.y;
+                    const dz = pos[2] - camera.position.z;
+                    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                    if (distance > MAX_RENDER_DISTANCE) return null;
+
+                    return (
+                        <Instance
+                            key={p.id}
+                            position={pos}
+                            color={color}
+                            onPointerOver={(e) => { e.stopPropagation(); setHover(true); }}
+                            onPointerOut={(e) => { e.stopPropagation(); setHover(false); }}
+                            onPointerDown={(e) => { e.stopPropagation(); selectPlanet(p); }}
+                            onClick={(e) => { e.stopPropagation(); selectPlanet(p); }}
+                        />
+                    );
+                })}
             </Instances>
 
             {selPos && (

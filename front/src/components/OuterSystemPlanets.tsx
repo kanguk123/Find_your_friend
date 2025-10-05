@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { Group } from "three";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useStore, type Planet } from "@/state/useStore";
 import { SolarPlanetClickHandler } from "@/utils/PlanetClickHandler";
 
@@ -17,9 +17,12 @@ interface OuterPlanet {
   orbitAngle?: number;
 }
 
+const MAX_RENDER_DISTANCE = 50; // 카메라로부터 최대 렌더링 거리
+
 export default function OuterSystemPlanets() {
   const [planets, setPlanets] = useState<OuterPlanet[]>([]);
   const planetRefs = useRef<Record<string, Group>>({});
+  const { camera } = useThree();
   const {
     setSelectedId,
     setFlyToTarget,
@@ -109,7 +112,19 @@ export default function OuterSystemPlanets() {
 
   return (
     <group>
-      {planets.map((planet) => (
+      {planets.map((planet) => {
+        // 카메라 거리 체크 (렌더링 시점에 실시간 계산)
+        const ref = planetRefs.current[planet.id];
+        if (ref) {
+          const dx = ref.position.x - camera.position.x;
+          const dy = ref.position.y - camera.position.y;
+          const dz = ref.position.z - camera.position.z;
+          const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+          if (distance > MAX_RENDER_DISTANCE) return null;
+        }
+
+        return (
         <group
           key={planet.id}
           ref={(el) => {
@@ -140,7 +155,8 @@ export default function OuterSystemPlanets() {
             />
           </mesh>
         </group>
-      ))}
+        );
+      })}
     </group>
   );
 }
