@@ -69,6 +69,8 @@ export default function PlanetListPanel() {
             dec: p.dec,
             score: p.ai_probability, // AI 확률을 score로 사용
             disposition: p.disposition,
+            coordinates_3d: p.coordinates_3d, // 3D 좌표 추가
+            distance: p.distance, // 거리 데이터 추가
             features: {
               mass: 0, // 백엔드에서 제공되지 않음
               radius: p.r,
@@ -250,7 +252,7 @@ export default function PlanetListPanel() {
       // 외계행성의 현재 위치 계산
       const phi = (planet.ra * Math.PI) / 180;
       const theta = (planet.dec * Math.PI) / 180;
-      const radius = 30;
+      const radius = 300;
       const planetX = radius * Math.cos(theta) * Math.cos(phi);
       const planetY = radius * Math.sin(theta);
       const planetZ = radius * Math.cos(theta) * Math.sin(phi);

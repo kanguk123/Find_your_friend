@@ -28,7 +28,7 @@ export default function PlanetCard({ planet, onClose }: Props) {
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-white mb-1 truncate">
-              {getProp<string>("name", "Unknown")}
+              {getProp<string>("name") || (getProp<number>("rowid") ? `Planet ${getProp<number>("rowid")}` : planetId)}
             </h2>
             <p className="text-xs text-white/50 uppercase tracking-wider">
               {mode === "expert" ? "Research Mode" : "Explorer Mode"}
@@ -139,6 +139,28 @@ export default function PlanetCard({ planet, onClose }: Props) {
                 <div className="text-xs font-mono text-white">
                   {(getProp<number>("dec") || 0).toFixed(2)}°
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* 3D 좌표 정보 */}
+          {getProp<any>("coordinates_3d") && (
+            <div>
+              <div className="text-xs text-white/50 mb-1">3D Coordinates</div>
+              <div className="text-xs font-mono text-white">
+                X: {(getProp<any>("coordinates_3d")?.x || 0).toFixed(2)},
+                Y: {(getProp<any>("coordinates_3d")?.y || 0).toFixed(2)},
+                Z: {(getProp<any>("coordinates_3d")?.z || 0).toFixed(2)}
+              </div>
+            </div>
+          )}
+
+          {/* 거리 정보 */}
+          {getProp<number>("distance") !== undefined && getProp<number>("distance") > 0 && (
+            <div>
+              <div className="text-xs text-white/50 mb-1">Distance</div>
+              <div className="text-xs font-mono text-white">
+                {(getProp<number>("distance") || 0).toFixed(2)} pc
               </div>
             </div>
           )}
