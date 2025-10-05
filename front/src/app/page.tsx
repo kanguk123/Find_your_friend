@@ -31,10 +31,6 @@ export default function Page() {
 
   const handleStart = () => {
     setShowTutorial(false);
-    // Turn on sound when starting the game
-    if (!isSoundOn) {
-      toggleSound();
-    }
   };
 
   if (isLoading) {
