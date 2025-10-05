@@ -1,67 +1,73 @@
-      - name: Deploy if no merge conflict (fast-forward only)
+name: Simple Deploy (FF-only)
+
+on:
+  push:
+    branches: ["master"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare SSH key
+        run: |
+          echo "${{ secrets.ACTIONS_DEPLOY_KEY }}" > key.pem
+          chmod 600 key.pem
+
+      - name: Deploy if fast-forward only
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PORT: ${{ secrets.SSH_PORT || 22 }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}            # 비어있으면 스크립트에서 22로 기본값
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           set -e
+          : "${SSH_PORT:=22}"   # 기본값 22
           SSH_OPTS="-i key.pem -o StrictHostKeyChecking=no -p ${SSH_PORT}"
 
           ssh $SSH_OPTS ${SSH_USER}@${SSH_HOST} << 'EOF'
           set -euo pipefail
           cd "${DEPLOY_PATH}"
 
-          # 0) 저장소 없으면 clone
+          # 0) 처음이면 clone, 이후엔 pull
           if [ ! -d ".git" ]; then
             git clone https://github.com/kanguk123/kanguk123-NASA_SPACE_CHALLENGE.git .
           fi
 
-          # 1) 원격 업데이트 & FF 배포
           git fetch origin master || true
+
+          # 1) FF 가능할 때만 배포
           if git pull --ff-only origin master; then
             echo "[OK] Fast-forward 성공 → 배포 진행"
 
-            # tmux 준비
+            # tmux 설치(없으면)
             if ! command -v tmux >/dev/null 2>&1; then
               sudo apt-get update -y
               sudo apt-get install -y tmux
             fi
 
-            ##### 백엔드: /back/.venv + python run.py #####
+            #### BACKEND ####
             BACK_DIR="${DEPLOY_PATH}/back"
             if [ -d "$BACK_DIR" ]; then
               cd "$BACK_DIR"
-
-              # venv 준비 및 의존성
               [ -d ".venv" ] || python3 -m venv .venv
               ./\.venv/bin/pip install -U pip wheel
               [ -f "requirements.txt" ] && ./\.venv/bin/pip install -r requirements.txt || true
-
-              # 기존 세션 종료 후 재시작
               tmux has-session -t nasa-back >/dev/null 2>&1 && tmux kill-session -t nasa-back || true
               tmux new -d -s nasa-back "cd '${BACK_DIR}'; exec ./\.venv/bin/python run.py"
-              echo "[BACK] tmux 세션(nasa-back) 재시작"
-            else
-              echo "[BACK] ${BACK_DIR} 없음 → 건너뜀"
+              echo "[BACK] restarted in tmux 'nasa-back'"
             fi
 
-            ##### 프론트: /front + npm run dev #####
+            #### FRONTEND ####
             FRONT_DIR="${DEPLOY_PATH}/front"
             if [ -d "$FRONT_DIR" ] && [ -f "${FRONT_DIR}/package.json" ]; then
               cd "$FRONT_DIR"
-              # 의존성 (있으면 ci, 없으면 install)
               npm ci || npm install
-
-              # 기존 세션 종료 후 재시작 (0.0.0.0:3000)
               tmux has-session -t nasa-front >/dev/null 2>&1 && tmux kill-session -t nasa-front || true
               tmux new -d -s nasa-front "cd '${FRONT_DIR}'; HOST=0.0.0.0 PORT=3000 npm run dev"
-              echo "[FRONT] tmux 세션(nasa-front) 재시작"
-            else
-              echo "[FRONT] ${FRONT_DIR} 또는 package.json 없음 → 건너뜀"
+              echo "[FRONT] restarted in tmux 'nasa-front'"
             fi
 
-            # 열려있는 포트 간단 확인
             ss -tulpen | grep -E ':3000|:5000|:8000' || true
             echo "[DONE] 배포 완료"
           else
