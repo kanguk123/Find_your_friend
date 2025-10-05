@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const backendUrl = `http://localhost:8000/predict/${id}`;
 
     console.log("Fetching prediction from backend:", backendUrl);

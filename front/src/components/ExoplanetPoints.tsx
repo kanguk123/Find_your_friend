@@ -1,8 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useCallback, useEffect } from "react";
-import { useFrame } from "@react-three/fiber";
-import { Mesh } from "three";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useStore, type Planet, type Vec3 } from "@/state/useStore";
 import { ExoplanetClickHandler } from "@/utils/PlanetClickHandler";
 
@@ -47,15 +45,10 @@ function scoreToHeatmap(score: number): string {
 }
 
 const SURFACE_OFFSET = 0.1;
-const RING_ROT_SPEED = 0.5;
-const RING_PULSE_SPEED = 2;
-const RING_SEGMENTS = 32;
-const RING_PULSE_RANGE = 0.05;
 
 export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
   const {
     threshold,
-    selectedId,
     setFlyToTarget,
     showOnlyFavorites,
     favorites,
@@ -72,8 +65,6 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
   );
 
   const dotRadius = Math.max(0.3, radius * 0.02); // 크기 증가
-  const ringInner = dotRadius * 1.8;
-  const ringOuter = dotRadius * 3.0;
 
   const points = useMemo(() => {
     const cut = threshold / 100;
@@ -106,11 +97,76 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
   const handlePlanetClick = useCallback(
     (p: Planet) => {
       const clickHandler = new ExoplanetClickHandler();
+      const { setShowPlanetCard, setSelectedPlanetData } = useStore.getState();
 
-      // 첫 번째 클릭: 행성 선택 (하이라이트)
+      // 첫 번째 클릭: 행성 선택 (하이라이트) 및 PlanetCard 표시
       const currentSelectedId = useStore.getState().selectedId;
       if (currentSelectedId !== p.id) {
         clickHandler.handleClick(p);
+
+        // PlanetCard 표시 - API에서 상세 정보 가져오기
+        setShowPlanetCard(true);
+        const planetId = parseInt(p.id.replace("exo-", ""));
+
+        // API에서 상세 정보 가져오기
+        import("../services/api")
+          .then(({ ApiService }) => ApiService.getPlanetDetail(planetId))
+          .then((response) => {
+            const { setSelectedPlanetData: setData } = useStore.getState();
+            if (response.success && response.data) {
+              // API에서 받은 상세 정보를 PlanetCard에 전달
+              setData(response.data);
+              console.log("3D Planet clicked - API data loaded:", response.data);
+            } else {
+              // API 호출 실패 시 기본 데이터 사용
+              const planetData = {
+                id: planetId,
+                rowid: planetId,
+                kepler_name: p.name,
+                ra: p.ra || 0,
+                dec: p.dec || 0,
+                teq: p.teq,
+                disposition: "disposition" in p ? String(p.disposition) : "UNKNOWN",
+                ai_probability: p.score || 0,
+                r: p.features?.radius || 0,
+                m: p.features?.mass || 0,
+                per: p.features?.orbital_period || 0,
+                flux: p.features?.stellar_flux || 0,
+                coordinates_3d: {
+                  x: 0,
+                  y: 0,
+                  z: 0,
+                },
+              };
+              setData(planetData);
+            }
+          })
+          .catch((error) => {
+            console.error("Failed to fetch planet detail from 3D click:", error);
+            const { setSelectedPlanetData: setData } = useStore.getState();
+            // 에러 발생 시 기본 데이터 사용
+            const planetData = {
+              id: planetId,
+              rowid: planetId,
+              kepler_name: p.name,
+              ra: p.ra || 0,
+              dec: p.dec || 0,
+              teq: p.teq,
+              disposition: "disposition" in p ? String(p.disposition) : "UNKNOWN",
+              ai_probability: p.score || 0,
+              r: p.features?.radius || 0,
+              m: p.features?.mass || 0,
+              per: p.features?.orbital_period || 0,
+              flux: p.features?.stellar_flux || 0,
+              coordinates_3d: {
+                x: 0,
+                y: 0,
+                z: 0,
+              },
+            };
+            setData(planetData);
+          });
+
         return;
       }
 
@@ -202,29 +258,6 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       document.body.style.cursor = "default";
     };
   }, [hover]);
-
-  const ringRef = useRef<Mesh>(null!);
-  const selPlanet = useMemo(
-    () => exoplanets.find((p) => p.id === selectedId),
-    [exoplanets, selectedId]
-  );
-  const selPos: [number, number, number] | undefined = useMemo(() => {
-    if (!selPlanet || !selPlanet.ra || !selPlanet.dec) return undefined;
-    const [x, y, z] = sph2cart(
-      selPlanet.ra,
-      selPlanet.dec,
-      radius + SURFACE_OFFSET
-    );
-    return [x, y, z];
-  }, [selPlanet, radius]);
-
-  useFrame((_, dt) => {
-    if (!ringRef.current) return;
-    ringRef.current.rotation.z += dt * RING_ROT_SPEED;
-    const s =
-      1 + Math.sin(performance.now() * RING_PULSE_SPEED) * RING_PULSE_RANGE;
-    ringRef.current.scale.setScalar(s);
-  });
 
   return (
     <>
