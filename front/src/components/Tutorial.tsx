@@ -25,8 +25,8 @@ export default function Tutorial({ onStart }: TutorialProps) {
               and right.
             </p>
             <p className="text-gray-400">
-              - <span className="font-bold text-white">Arrow Keys (↑↓←→):</span>{" "}
-              Pitch and yaw.
+              - <span className="font-bold text-white">Arrow Keys (↑↓):</span>{" "}
+              Pitch
             </p>
           </div>
           <div>
