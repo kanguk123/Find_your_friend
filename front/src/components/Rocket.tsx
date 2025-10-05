@@ -57,6 +57,7 @@ export default function Rocket() {
   const requestReset = useStore((s) => s.requestReset);
   const setRocketAlive = useStore((s) => s.setRocketAlive);
   const rocketAlive = useStore((s) => s.rocketAlive);
+  const rocketLevel = useStore((s) => s.rocketLevel);
 
   const followRocket = useStore((s) => s.followRocket);
   const setFollowRocket = useStore((s) => s.setFollowRocket);
@@ -302,6 +303,34 @@ export default function Rocket() {
     flameIntensity.current = boosting.current ? 1.0 : 0.0;
   });
 
+  // 로켓 레벨에 따른 회전 조정
+  const modelRotation: [number, number, number] = useMemo(() => {
+    switch (rocketLevel) {
+      case 1:
+        return [0, Math.PI / 6, 0]; // 기본 로켓
+      case 2:
+        return [Math.PI / 2, 0, 0]; // UFO - 앞으로 90도 기울임
+      case 3:
+        return [Math.PI / 2 + Math.PI, Math.PI + Math.PI, -Math.PI + (Math.PI * 40 / 180) - (Math.PI * 60 / 180) + (Math.PI * 20 / 180)]; // 3단계 우주선 - 오른쪽으로 20도
+      default:
+        return [0, 0, 0];
+    }
+  }, [rocketLevel]);
+
+  // 로켓 레벨에 따른 불꽃 위치 조정
+  const flamePosition: [number, number, number] = useMemo(() => {
+    switch (rocketLevel) {
+      case 1:
+        return [0, 0, 0.02]; // 기본 로켓
+      case 2:
+        return [0, 0, 0.05]; // UFO
+      case 3:
+        return [0, 0, 0.3]; // 3단계 우주선 - 더 뒤쪽
+      default:
+        return [0, 0, 0.05];
+    }
+  }, [rocketLevel]);
+
   return (
     <>
       <OrbitControlsCmp
@@ -323,13 +352,13 @@ export default function Rocket() {
         <hemisphereLight intensity={0.3} />
 
         <group rotation={visualRotation}>
-          <RocketModel scaleToMeters={0.2} rotation={[0, Math.PI / 6, 0]} />
+          <RocketModel scaleToMeters={0.2} rotation={modelRotation} />
         </group>
         {/* Rocket flame - positioned at the back of the rocket, aligned with rocket direction */}
         {visible && (
           <RocketFlame
             intensity={flameIntensity.current}
-            position={[0, 0, 0.05]}
+            position={flamePosition}
           />
         )}
       </group>
