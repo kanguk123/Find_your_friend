@@ -69,7 +69,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
     [planets]
   );
 
-  const dotRadius = Math.max(0.3, radius * 0.02); // 크기 증가
+  const dotRadius = Math.max(0.3, radius * 0.0005); // 크기를 1/10로 축소
 
   const points = useMemo(() => {
     const cut = threshold / 100;
@@ -84,7 +84,27 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       })
       .filter((p) => p.ra !== undefined && p.dec !== undefined)
       .map((p) => {
-        const [x, y, z] = sph2cart(p.ra!, p.dec!, r);
+        // coordinates_3d가 있으면 그대로 사용
+        let x, y, z;
+        const coords3d = (p as Record<string, any>).coordinates_3d;
+        if (
+          coords3d &&
+          typeof coords3d.x === "number" &&
+          typeof coords3d.y === "number" &&
+          typeof coords3d.z === "number"
+        ) {
+          x = coords3d.x;
+          y = coords3d.y;
+          z = coords3d.z;
+        } else {
+          // coordinates_3d가 없으면 ra/dec와 distance를 사용하여 계산
+          // distance가 없으면 랜덤한 거리 사용 (radius의 0.5배~2배)
+          const distance = (p as Record<string, any>).distance;
+          const actualRadius = distance
+            ? Math.max(50, Math.min(500, distance * 10)) // distance를 적절한 스케일로 변환
+            : r * (0.5 + Math.random() * 1.5); // 랜덤 거리
+          [x, y, z] = sph2cart(p.ra!, p.dec!, actualRadius);
+        }
         const color = scoreToHeatmap(p.score || 0);
         return { p, pos: [x, y, z] as [number, number, number], color };
       });
@@ -102,7 +122,7 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
   const handlePlanetClick = useCallback(
     (p: Planet) => {
       const clickHandler = new ExoplanetClickHandler();
-      const { setShowPlanetCard, setSelectedPlanetData } = useStore.getState();
+      const { setShowPlanetCard } = useStore.getState();
 
       // 첫 번째 클릭: 행성 선택 (하이라이트) 및 PlanetCard 표시
       const currentSelectedId = useStore.getState().selectedId;
@@ -119,8 +139,25 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
           // 무조건 1코인
           collectCoin();
 
-          // 행성 위치 계산
-          const [px, py, pz] = sph2cart(p.ra!, p.dec!, radius + SURFACE_OFFSET);
+          // 행성 위치 계산 - coordinates_3d가 있으면 그대로 사용
+          let px, py, pz;
+          const coords3d = (p as Record<string, any>).coordinates_3d;
+          if (
+            coords3d &&
+            typeof coords3d.x === "number" &&
+            typeof coords3d.y === "number" &&
+            typeof coords3d.z === "number"
+          ) {
+            px = coords3d.x;
+            py = coords3d.y;
+            pz = coords3d.z;
+          } else {
+            const distance = (p as Record<string, any>).distance;
+            const actualRadius = distance
+              ? Math.max(50, Math.min(500, distance * 10))
+              : radius + SURFACE_OFFSET;
+            [px, py, pz] = sph2cart(p.ra!, p.dec!, actualRadius);
+          }
 
           // 플로팅 텍스트 표시
           addFloatingText("+1 🪙", [px, py, pz]);
@@ -128,7 +165,11 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
           // 행성을 수집 완료로 마킹
           addCollectedPlanet(p.id);
 
-          console.log(`🎉 Collected 1 coin from ${p.name} (${((p.score || 0) * 100).toFixed(1)}%)`);
+          console.log(
+            `🎉 Collected 1 coin from ${p.name} (${(
+              (p.score || 0) * 100
+            ).toFixed(1)}%)`
+          );
         }
 
         // PlanetCard 표시 - API에서 상세 정보 가져오기
@@ -143,7 +184,10 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
             if (response.success && response.data) {
               // API에서 받은 상세 정보를 PlanetCard에 전달
               setData(response.data);
-              console.log("3D Planet clicked - API data loaded:", response.data);
+              console.log(
+                "3D Planet clicked - API data loaded:",
+                response.data
+              );
             } else {
               // API 호출 실패 시 기본 데이터 사용
               const planetData = {
@@ -153,7 +197,8 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
                 ra: p.ra || 0,
                 dec: p.dec || 0,
                 teq: p.teq,
-                disposition: "disposition" in p ? String(p.disposition) : "UNKNOWN",
+                disposition:
+                  "disposition" in p ? String(p.disposition) : "UNKNOWN",
                 ai_probability: p.score || 0,
                 r: p.features?.radius || 0,
                 m: p.features?.mass || 0,
@@ -169,7 +214,10 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
             }
           })
           .catch((error) => {
-            console.error("Failed to fetch planet detail from 3D click:", error);
+            console.error(
+              "Failed to fetch planet detail from 3D click:",
+              error
+            );
             const { setSelectedPlanetData: setData } = useStore.getState();
             // 에러 발생 시 기본 데이터 사용
             const planetData = {
@@ -179,7 +227,8 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
               ra: p.ra || 0,
               dec: p.dec || 0,
               teq: p.teq,
-              disposition: "disposition" in p ? String(p.disposition) : "UNKNOWN",
+              disposition:
+                "disposition" in p ? String(p.disposition) : "UNKNOWN",
               ai_probability: p.score || 0,
               r: p.features?.radius || 0,
               m: p.features?.mass || 0,
@@ -234,11 +283,29 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       setRocketCameraTarget(p.id);
       console.log("로켓 카메라 모드로 전환:", p.name);
 
-      // 카메라 거리는 반경 비례로 잡아줌
-      const [x, y, z] = sph2cart(p.ra, p.dec, radius + SURFACE_OFFSET);
+      // coordinates_3d가 있으면 그대로 사용, 없으면 ra/dec와 distance로 계산
+      let x, y, z;
+      const coords3d = (p as Record<string, any>).coordinates_3d;
+      if (
+        coords3d &&
+        typeof coords3d.x === "number" &&
+        typeof coords3d.y === "number" &&
+        typeof coords3d.z === "number"
+      ) {
+        x = coords3d.x;
+        y = coords3d.y;
+        z = coords3d.z;
+      } else {
+        const distance = (p as Record<string, any>).distance;
+        const actualRadius = distance
+          ? Math.max(50, Math.min(500, distance * 10))
+          : radius + SURFACE_OFFSET;
+        [x, y, z] = sph2cart(p.ra, p.dec, actualRadius);
+      }
+
       const len = Math.hypot(x, y, z) || 1;
       const n: [number, number, number] = [x / len, y / len, z / len];
-      const dist = radius * 1.2; // 외계행성은 작으므로 더 멀리서 관찰
+      const dist = len * 1.2; // 행성으로부터 20% 더 멀리
       const targetPos: [number, number, number] = [
         n[0] * dist,
         n[1] * dist,
@@ -317,11 +384,25 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
               handlePlanetClick(p);
             }}
           >
-            <sphereGeometry args={[isSelected ? dotRadius * 1.5 : dotRadius, 16, 16]} />
+            <sphereGeometry
+              args={[isSelected ? dotRadius * 1.5 : dotRadius, 16, 16]}
+            />
             <meshBasicMaterial
-              color={visualState.isOtherSelected ? "#666666" : isSelected ? "#ffffff" : color}
+              color={
+                visualState.isOtherSelected
+                  ? "#666666"
+                  : isSelected
+                  ? "#ffffff"
+                  : color
+              }
               transparent
-              opacity={visualState.isOtherSelected ? visualState.opacity : isSelected ? 1.0 : 0.8}
+              opacity={
+                visualState.isOtherSelected
+                  ? visualState.opacity
+                  : isSelected
+                  ? 1.0
+                  : 0.8
+              }
             />
           </mesh>
         );

@@ -38,8 +38,6 @@ const BOOST_MAX = 2.0;
 const PITCH_RATE = 1.6;
 const YAW_RATE = 1.8;
 const ROLL_RATE = 1.8;
-const BANK_GAIN = 0.7;
-const BANK_RETURN = 3.0;
 
 const TPV_LOOK_AHEAD = 0.22;
 const TARGET_LERP = 0.2;
@@ -334,7 +332,7 @@ export default function Rocket() {
   return (
     <>
       <OrbitControlsCmp
-        ref={controlsRef as any}
+        ref={controlsRef}
         enablePan={false}
         enableDamping
         dampingFactor={0.12}
@@ -346,9 +344,27 @@ export default function Rocket() {
 
       <group ref={physRef} visible={visible}>
         {/* 로켓 주변 조명 - 로켓과 함께 움직임 */}
-        <pointLight position={[0, 0, 0]} intensity={2.5} distance={3} decay={2} color="#ffffff" />
-        <pointLight position={[0.3, 0, 0]} intensity={1.2} distance={2} decay={2} color="#ffffff" />
-        <pointLight position={[-0.3, 0, 0]} intensity={1.2} distance={2} decay={2} color="#ffffff" />
+        <pointLight
+          position={[0, 0, 0]}
+          intensity={2.5}
+          distance={3}
+          decay={2}
+          color="#ffffff"
+        />
+        <pointLight
+          position={[0.3, 0, 0]}
+          intensity={1.2}
+          distance={2}
+          decay={2}
+          color="#ffffff"
+        />
+        <pointLight
+          position={[-0.3, 0, 0]}
+          intensity={1.2}
+          distance={2}
+          decay={2}
+          color="#ffffff"
+        />
         <hemisphereLight intensity={0.3} />
 
         <group rotation={visualRotation}>

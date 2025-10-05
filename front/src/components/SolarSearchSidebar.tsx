@@ -76,7 +76,7 @@ export default function SolarSearchSidebar() {
         console.log("Search: Flying to exoplanet:", planet.name, "id:", id);
 
         // 외계행성 위치 계산
-        const radius = 30; // ExoplanetPoints의 radius와 동일
+        const radius = 300; // ExoplanetPoints의 radius와 동일
         const SURFACE_OFFSET = 0.1;
         const phi = (planet.ra * Math.PI) / 180;
         const theta = (planet.dec * Math.PI) / 180;
