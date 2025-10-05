@@ -420,7 +420,7 @@ export default function Scene() {
 
   return (
     <div className="relative h-screen w-full">
-			<Settings />
+			{mode === "player" && <Settings />}
       <BackgroundSound audioRef={backgroundAudioRef} volume={backgroundVolume} />
 			<audio ref={forwardAudioRef} src="/audio/forward.mp3" />
       <audio ref={shiftAudioRef} src="/audio/shift.mp3" />
@@ -529,16 +529,6 @@ export default function Scene() {
       {/* Expert 모드 전용 패널들 - 우측 상단 */}
       {mode === "expert" && (
         <div className="pointer-events-none absolute top-16 right-3 z-50 w-80 space-y-3 max-h-[calc(100vh-16rem)] overflow-y-auto">
-          <div className="pointer-events-auto">
-            <HyperparameterPanel
-              isExpanded={expandedPanel === "hyperparameter"}
-              onToggle={() =>
-                setExpandedPanel(
-                  expandedPanel === "hyperparameter" ? null : "hyperparameter"
-                )
-              }
-            />
-          </div>
           <div className="pointer-events-auto">
             <ModelAccuracy
               isExpanded={expandedPanel === "model"}
