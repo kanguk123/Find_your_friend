@@ -445,7 +445,7 @@ export default function PlanetListPanel() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs text-white/70">
-                      {planet.score && (
+                      {!isSolarSystem && planet.score && (
                         <div>
                           <span className="text-white/50">Score:</span>
                           <span className="ml-1 font-mono text-green-400">
@@ -453,71 +453,39 @@ export default function PlanetListPanel() {
                           </span>
                         </div>
                       )}
-                      {isSolarSystem ? (
-                        // 태양계 행성 정보
-                        <>
-                          {planet.features?.orbital_period && (
-                            <div>
-                              <span className="text-white/50">Period:</span>
-                              <span className="ml-1 font-mono text-yellow-400">
-                                {planet.features.orbital_period.toFixed(0)}d
-                              </span>
-                            </div>
-                          )}
-                          {planet.features?.radius && (
-                            <div>
-                              <span className="text-white/50">Radius:</span>
-                              <span className="ml-1 font-mono text-blue-400">
-                                {planet.features.radius.toFixed(2)}R⊕
-                              </span>
-                            </div>
-                          )}
-                          {planet.features?.mass && (
-                            <div>
-                              <span className="text-white/50">Mass:</span>
-                              <span className="ml-1 font-mono text-purple-400">
-                                {planet.features.mass.toFixed(2)}M⊕
-                              </span>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        // 외계행성 정보
-                        <>
-                          {"disposition" in planet && planet.disposition && (
-                            <div>
-                              <span className="text-white/50">Type:</span>
-                              <span
-                                className={`ml-1 font-mono ${
-                                  planet.disposition === "CONFIRMED"
-                                    ? "text-green-400"
-                                    : planet.disposition === "CANDIDATE"
-                                    ? "text-yellow-400"
-                                    : "text-red-400"
-                                }`}
-                              >
-                                {planet.disposition}
-                              </span>
-                            </div>
-                          )}
-                          {planet.teq && (
-                            <div>
-                              <span className="text-white/50">Temp:</span>
-                              <span className="ml-1 font-mono text-blue-400">
-                                {planet.teq}K
-                              </span>
-                            </div>
-                          )}
-                          {planet.ra !== undefined && planet.dec !== undefined && (
-                            <div className="col-span-2">
-                              <span className="text-white/50">Position:</span>
-                              <span className="ml-1 font-mono text-orange-400">
-                                RA: {planet.ra.toFixed(2)}°, Dec:{" "}
-                                {planet.dec.toFixed(2)}°
-                              </span>
-                            </div>
-                          )}
-                        </>
+                      {/* 외계행성 정보 */}
+                      {"disposition" in planet && planet.disposition && (
+                        <div>
+                          <span className="text-white/50">Type:</span>
+                          <span
+                            className={`ml-1 font-mono ${
+                              planet.disposition === "CONFIRMED"
+                                ? "text-green-400"
+                                : planet.disposition === "CANDIDATE"
+                                ? "text-yellow-400"
+                                : "text-red-400"
+                            }`}
+                          >
+                            {planet.disposition}
+                          </span>
+                        </div>
+                      )}
+                      {!isSolarSystem && planet.teq && (
+                        <div>
+                          <span className="text-white/50">Temp:</span>
+                          <span className="ml-1 font-mono text-blue-400">
+                            {planet.teq}K
+                          </span>
+                        </div>
+                      )}
+                      {!isSolarSystem && planet.ra !== undefined && planet.dec !== undefined && (
+                        <div className="col-span-2">
+                          <span className="text-white/50">Position:</span>
+                          <span className="ml-1 font-mono text-orange-400">
+                            RA: {planet.ra.toFixed(2)}°, Dec:{" "}
+                            {planet.dec.toFixed(2)}°
+                          </span>
+                        </div>
                       )}
                     </div>
 

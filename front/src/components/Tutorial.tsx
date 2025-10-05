@@ -42,6 +42,10 @@ export default function Tutorial({ onStart }: TutorialProps) {
               </span>{" "}
               Orbit around the spaceship.
             </p>
+            <p className="text-gray-400">
+              - <span className="font-bold text-white">Space Bar:</span> Switch
+              to rocket view.
+            </p>
           </div>
         </div>
         <div className="text-center mt-8">

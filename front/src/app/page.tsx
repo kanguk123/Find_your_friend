@@ -11,7 +11,7 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
   const searchParams = useSearchParams();
-  const { setMode } = useStore();
+  const { setMode, toggleSound, isSoundOn } = useStore();
 
   useEffect(() => {
     // Check if mode query parameter is set
@@ -31,6 +31,10 @@ export default function Page() {
 
   const handleStart = () => {
     setShowTutorial(false);
+    // Turn on sound when starting the game
+    if (!isSoundOn) {
+      toggleSound();
+    }
   };
 
   if (isLoading) {
