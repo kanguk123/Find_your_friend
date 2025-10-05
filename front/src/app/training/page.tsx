@@ -60,7 +60,7 @@ export default function TrainingPage() {
       setProgress(20);
 
       // 백엔드 API 호출
-      const response = await fetch("http://localhost:8000/upload/identify-planets", {
+      const response = await fetch("/api/upload/identify-planets", {
         method: "POST",
         body: formData,
       });
