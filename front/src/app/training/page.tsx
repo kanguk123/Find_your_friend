@@ -139,10 +139,10 @@ export default function TrainingPage() {
             </div>
           </div>
           <Link
-            href="/"
+            href="/?mode=expert"
             className="px-2 sm:px-4 py-1.5 sm:py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white text-xs sm:text-sm font-medium transition-colors"
           >
-            <span className="hidden sm:inline">← Back to Explorer</span>
+            <span className="hidden sm:inline">← Back to Expert Mode</span>
             <span className="sm:hidden">← Back</span>
           </Link>
         </div>

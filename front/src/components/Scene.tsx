@@ -12,7 +12,6 @@ import Rocket from "./Rocket";
 import GameHUD from "./GameHUD";
 import ModeSwitch from "./ModeSwitch";
 import FavoriteFilter from "./FavoriteFilter";
-import HyperparameterPanel from "./HyperparameterPanel";
 import ModelAccuracy from "./ModelAccuracy";
 import ExoplanetPoints from "./ExoplanetPoints";
 import PlanetListPanel from "./PlanetListPanel";
@@ -278,9 +277,6 @@ function CameraRig() {
 }
 
 export default function Scene() {
-  const [expandedPanel, setExpandedPanel] = useState<
-    "hyperparameter" | "model" | null
-  >(null);
   const {
     mode,
     selectedId,
@@ -530,12 +526,7 @@ export default function Scene() {
       {mode === "expert" && (
         <div className="pointer-events-none absolute top-16 right-3 z-50 w-80 space-y-3 max-h-[calc(100vh-16rem)] overflow-y-auto">
           <div className="pointer-events-auto">
-            <ModelAccuracy
-              isExpanded={expandedPanel === "model"}
-              onToggle={() =>
-                setExpandedPanel(expandedPanel === "model" ? null : "model")
-              }
-            />
+            <ModelAccuracy />
           </div>
         </div>
       )}
