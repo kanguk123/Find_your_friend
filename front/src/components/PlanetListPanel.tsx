@@ -7,11 +7,6 @@ import {
   SolarPlanetClickHandler,
   ExoplanetClickHandler,
 } from "@/utils/PlanetClickHandler";
-import {
-  moveSelectedPlanet,
-  moveSelectedExoplanet,
-  moveCameraToSun,
-} from "@/utils/cameraMovement";
 
 export default function PlanetListPanel() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -214,9 +209,16 @@ export default function PlanetListPanel() {
     if (planet.ra === undefined || planet.dec === undefined) {
       // 태양인 경우
       if (planet.id === SUN.id) {
-        moveCameraToSun();
+        // 3D 오브젝트와 동일한 로직
+        const { setFlyToTarget, setFollowRocket, setIsCameraMoving } =
+          useStore.getState();
+
+        setIsCameraMoving(true);
+        // 태양은 중심에 있으므로 적당한 거리에서 보기
+        setFlyToTarget([0, 0, 4]);
+        setFollowRocket(false);
       } else {
-        // 다른 태양계 행성의 경우 - bodyPositions에서 현재 위치 가져오기
+        // 다른 태양계 행성의 경우 - 3D 오브젝트와 동일한 로직
         const planetPos = bodyPositions[planet.id];
         if (!planetPos) {
           console.warn("행성 위치를 찾을 수 없습니다:", planet.id);
@@ -226,11 +228,46 @@ export default function PlanetListPanel() {
         const solarPlanet = PLANETS.find((p) => p.id === planet.id) || SUN;
         const planetRadius = solarPlanet.radius * 0.62; // GLOBAL_PLANET_SCALE 적용
 
-        // moveSelectedPlanet 함수 사용
-        moveSelectedPlanet(planet, planetPos, planetRadius);
+        // 3D 오브젝트와 동일한 카메라 위치 계산
+        const { setFlyToTarget, setFollowRocket, setIsCameraMoving, setRocketCameraMode, setRocketCameraTarget } =
+          useStore.getState();
+
+        setIsCameraMoving(true);
+
+        // 로켓 카메라 모드로 전환
+        setRocketCameraMode("planet_view");
+        setRocketCameraTarget(planet.id);
+        console.log("로켓 카메라 모드로 전환:", planet.name);
+
+        const [planetX, planetY, planetZ] = planetPos;
+        console.log("Planet actual position:", planetPos);
+
+        // 행성 크기에 따라 카메라 거리 조정
+        const cameraDistance = planetRadius * 4.5;
+
+        // 태양을 기준으로 상대적 카메라 위치 계산
+        const dirX = planetX;
+        const dirZ = planetZ;
+        const len = Math.hypot(dirX, dirZ) || 1;
+        const normalX = dirX / len;
+        const normalZ = dirZ / len;
+
+        // 행성 앞쪽에서 태양 반대 방향으로 카메라 배치
+        const camX = planetX + normalX * cameraDistance;
+        const camY = planetY + cameraDistance * 0.15;
+        const camZ = planetZ + normalZ * cameraDistance;
+
+        console.log("Camera target position (relative to planet):", [
+          camX,
+          camY,
+          camZ,
+        ]);
+
+        setFlyToTarget([camX, camY, camZ]);
+        setFollowRocket(false);
       }
     } else {
-      // 외계행성의 경우
+      // 외계행성의 경우 - 3D 오브젝트와 동일한 로직
       // ra와 dec가 undefined 또는 null인지 확인 (0은 유효한 값)
       if (planet.ra === undefined || planet.ra === null ||
           planet.dec === undefined || planet.dec === null) {
@@ -249,31 +286,75 @@ export default function PlanetListPanel() {
         return;
       }
 
-      // 외계행성의 현재 위치 계산
-      const phi = (planet.ra * Math.PI) / 180;
-      const theta = (planet.dec * Math.PI) / 180;
-      const radius = 300;
-      const planetX = radius * Math.cos(theta) * Math.cos(phi);
-      const planetY = radius * Math.sin(theta);
-      const planetZ = radius * Math.cos(theta) * Math.sin(phi);
+      // 3D 오브젝트와 동일한 위치 계산
+      const { setFlyToTarget, setIsCameraMoving, setRocketCameraMode, setRocketCameraTarget } =
+        useStore.getState();
 
-      const planetPosition: Vec3 = [planetX, planetY, planetZ];
+      setIsCameraMoving(true);
 
-      // bodyPositions에 외계행성 위치 저장 (Scene.tsx에서 사용)
-      const { setBodyPositions, bodyPositions } = useStore.getState();
+      // 로켓 카메라 모드로 전환
+      setRocketCameraMode("planet_view");
+      setRocketCameraTarget(planet.id);
+      console.log("로켓 카메라 모드로 전환:", planet.name);
+
+      // coordinates_3d가 있으면 그대로 사용, 없으면 ra/dec와 distance로 계산
+      let x, y, z;
+      const coords3d = (planet as any).coordinates_3d;
+      const SURFACE_OFFSET = 0.1;
+      const radius = 25;
+
+      if (
+        coords3d &&
+        typeof coords3d.x === "number" &&
+        typeof coords3d.y === "number" &&
+        typeof coords3d.z === "number"
+      ) {
+        x = coords3d.x;
+        y = coords3d.y;
+        z = coords3d.z;
+      } else {
+        const distance = (planet as any).distance;
+        const actualRadius = distance
+          ? Math.max(50, Math.min(500, distance * 10))
+          : radius + SURFACE_OFFSET;
+        const phi = (planet.ra * Math.PI) / 180;
+        const theta = (planet.dec * Math.PI) / 180;
+        x = actualRadius * Math.cos(theta) * Math.cos(phi);
+        y = actualRadius * Math.sin(theta);
+        z = actualRadius * Math.cos(theta) * Math.sin(phi);
+      }
+
+      const len = Math.hypot(x, y, z) || 1;
+      const n: [number, number, number] = [x / len, y / len, z / len];
+      const dist = len * 1.2; // 행성으로부터 20% 더 멀리
+      const targetPos: [number, number, number] = [
+        n[0] * dist,
+        n[1] * dist,
+        n[2] * dist,
+      ];
+
+      console.log(
+        "Flying to exoplanet:",
+        planet.name,
+        "planet position:",
+        [x, y, z],
+        "camera target:",
+        targetPos,
+        "distance:",
+        dist
+      );
+
+      // bodyPositions에 외계행성 위치 저장
+      const currentPositions = useStore.getState().bodyPositions;
       const newPositions = {
-        ...bodyPositions,
-        [planet.id]: planetPosition,
+        ...currentPositions,
+        [planet.id]: [x, y, z] as Vec3,
       };
-      setBodyPositions(newPositions);
+      useStore.getState().setBodyPositions(newPositions);
 
       // 즉시 bodyPositions 업데이트 후 카메라 이동
       useStore.setState({ bodyPositions: newPositions });
-
-      const exoplanetRadius = Math.max(0.3, radius * 0.02); // ExoplanetPoints.tsx의 dotRadius와 동일
-
-      // moveSelectedExoplanet 함수 사용 (sphereRadius 전달)
-      moveSelectedExoplanet(planet, planetPosition, exoplanetRadius, radius);
+      setFlyToTarget(targetPos);
     }
   };
 
