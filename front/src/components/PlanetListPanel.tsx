@@ -57,7 +57,7 @@ export default function PlanetListPanel() {
       .then(({ ApiService }) => ApiService.getPlanets(1, 500))
       .then((response) => {
         if (response.success && response.data) {
-          const exoplanets: Planet[] = response.data.map((p: any) => ({
+          const exoplanets: Planet[] = response.data.map((p: { id: number; rowid: number; ra: number; dec: number; ai_probability: number; disposition: string; coordinates_3d: { x: number; y: number; z: number; }; distance: number; r: number; }) => ({
             id: `exo-${p.id}`, // ID 충돌 방지
             name: `Planet ${p.rowid}`,
             ra: p.ra,
@@ -148,7 +148,7 @@ export default function PlanetListPanel() {
                 ra: planet.ra || 0,
                 dec: planet.dec || 0,
                 teq: planet.teq,
-                disposition: (planet as any).disposition || "UNKNOWN",
+                disposition: planet.disposition || "UNKNOWN",
                 ai_probability: planet.score || 0,
                 r: planet.features?.radius || 0,
                 m: planet.features?.mass || 0,
@@ -173,7 +173,7 @@ export default function PlanetListPanel() {
               ra: planet.ra || 0,
               dec: planet.dec || 0,
               teq: planet.teq,
-              disposition: (planet as any).disposition || "UNKNOWN",
+              disposition: planet.disposition || "UNKNOWN",
               ai_probability: planet.score || 0,
               r: planet.features?.radius || 0,
               m: planet.features?.mass || 0,
@@ -296,7 +296,7 @@ export default function PlanetListPanel() {
 
       // coordinates_3d가 있으면 그대로 사용, 없으면 ra/dec와 distance로 계산
       let x, y, z;
-      const coords3d = (planet as any).coordinates_3d;
+      const coords3d = planet.coordinates_3d;
       const SURFACE_OFFSET = 0.1;
       const radius = 25;
 
@@ -310,7 +310,7 @@ export default function PlanetListPanel() {
         y = coords3d.y;
         z = coords3d.z;
       } else {
-        const distance = (planet as any).distance;
+        const distance = planet.distance;
         const actualRadius = distance
           ? Math.max(50, Math.min(500, distance * 10))
           : radius + SURFACE_OFFSET;

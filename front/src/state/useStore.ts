@@ -106,8 +106,8 @@ type Store = {
   // === PlanetCard 상태 ===
   showPlanetCard: boolean;
   setShowPlanetCard: (show: boolean) => void;
-  selectedPlanetData: any | null;
-  setSelectedPlanetData: (data: any | null) => void;
+  selectedPlanetData: Planet | null;
+  setSelectedPlanetData: (data: Planet | null) => void;
 
   // === Coin & Rocket Evolution System ===
   coinCount: number;
@@ -119,6 +119,14 @@ type Store = {
   removeFloatingText: (id: string) => void;
   collectedPlanets: Set<string>; // 코인을 획득한 행성 ID 목록
   addCollectedPlanet: (planetId: string) => void;
+
+  // === Sound System ===
+  isSoundOn: boolean;
+  backgroundVolume: number; // 0 to 1
+  effectsVolume: number; // 0 to 1
+  toggleSound: () => void;
+  setBackgroundVolume: (volume: number) => void;
+  setEffectsVolume: (volume: number) => void;
 };
 
 export const useStore = create<Store>((set) => ({
@@ -265,4 +273,14 @@ export const useStore = create<Store>((set) => ({
       newCollected.add(planetId);
       return { collectedPlanets: newCollected };
     }),
+
+  // === Sound System ===
+  isSoundOn: false,
+  backgroundVolume: 0.3,
+  effectsVolume: 0.5,
+  toggleSound: () => set((state) => ({ isSoundOn: !state.isSoundOn })),
+  setBackgroundVolume: (volume) =>
+    set({ backgroundVolume: Math.max(0, Math.min(1, volume)) }),
+  setEffectsVolume: (volume) =>
+    set({ effectsVolume: Math.max(0, Math.min(1, volume)) }),
 }));

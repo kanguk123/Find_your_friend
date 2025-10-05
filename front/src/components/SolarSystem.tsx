@@ -35,64 +35,35 @@ function PlanetMesh({
   const textures = useSolarTextures();
   const tex = texUrl ? textures.get(texUrl) : undefined;
   const hasTex = !!tex;
-  const clickHandler = new SolarPlanetClickHandler();
-
-  // 행성을 Planet 타입으로 변환
-  const planet = {
-    id: body.id,
-    name: body.name,
-    score: body.score,
-    features: {
-      mass: body.radius * 10,
-      radius: body.radius,
-      orbital_period: body.periodDays,
-      stellar_flux: 1.0 / (body.orbitRadius || 1) ** 2,
-    },
-  };
-
-  const visualState = clickHandler.getVisualState(planet);
+  const { selectedId } = useStore();
+  const isSelected = selectedId === body.id;
+  const isOtherSelected = selectedId != null && selectedId !== body.id;
 
   return (
-    <mesh renderOrder={visualState.renderOrder}>
+    <mesh renderOrder={isSelected ? 1 : isOtherSelected ? -1 : 0}>
       <sphereGeometry args={[renderRadius(body), 64, 64]} />
       <meshStandardMaterial
         map={tex}
-        emissiveMap={visualState.isSelected && tex ? tex : undefined}
-        color={
-          visualState.isOtherSelected
-            ? "#666666"
-            : hasTex
-            ? "#ffffff"
-            : body.color
-        }
+        emissiveMap={isSelected && tex ? tex : undefined}
+        color={isOtherSelected ? "#666666" : hasTex ? "#ffffff" : body.color}
         roughness={0.9}
         metalness={0}
-        emissive={
-          visualState.isOtherSelected
-            ? "#000000"
-            : hasTex
-            ? "#000000"
-            : body.color
-        }
+        emissive={isOtherSelected ? "#000000" : hasTex ? "#000000" : body.color}
         emissiveIntensity={
-          visualState.isSelected && isCameraMovingToThis
+          isSelected && isCameraMovingToThis
             ? hasTex
               ? 1.2
               : 2.0
-            : visualState.isSelected
+            : isSelected
             ? hasTex
               ? 0.5
               : 1.0
-            : visualState.isOtherSelected
-            ? 0.0
-            : hasTex
-            ? 0.0
             : 0.08
         }
         depthTest={true}
-        depthWrite={!visualState.isOtherSelected}
-        transparent={!!visualState.isOtherSelected}
-        opacity={visualState.opacity}
+        depthWrite={!isOtherSelected}
+        transparent={!!isOtherSelected}
+        opacity={isOtherSelected ? 0.3 : 1.0}
       />
     </mesh>
   );

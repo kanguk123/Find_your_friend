@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { Vector3, TextureLoader, BackSide } from "three";
@@ -19,6 +19,7 @@ import PlanetListPanel from "./PlanetListPanel";
 import PlanetCard from "./PlanetCard";
 import { FloatingTextManager } from "./FloatingCoinText";
 import { useStore } from "@/state/useStore";
+import Settings from "./Settings";
 
 // 키 입력 상태는 useStore에서 관리
 
@@ -293,8 +294,12 @@ export default function Scene() {
     selectedPlanetData,
     setSelectedPlanetData,
     isCameraMoving,
+    backgroundVolume,
   } = useStore();
 
+	  const forwardAudioRef = useRef<HTMLAudioElement>(null);
+		const shiftAudioRef = useRef<HTMLAudioElement>(null);
+	  const backgroundAudioRef = useRef<HTMLAudioElement>(null);
   // 키보드 입력 처리
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -415,6 +420,11 @@ export default function Scene() {
 
   return (
     <div className="relative h-screen w-full">
+			<Settings />
+      <BackgroundSound audioRef={backgroundAudioRef} volume={backgroundVolume} />
+			<audio ref={forwardAudioRef} src="/audio/forward.mp3" />
+      <audio ref={shiftAudioRef} src="/audio/shift.mp3" />
+      <audio ref={backgroundAudioRef} src="/audio/sound_background.mp3" loop />
       {/* 모드 전환 UI - 최상단 중앙 */}
       <div className="pointer-events-none absolute top-3 left-0 right-0 z-50 flex justify-center px-4">
         <div className="pointer-events-auto">
@@ -613,7 +623,7 @@ export default function Scene() {
           <ExoplanetPoints radius={300} />
 
           {/* 로켓은 Player 모드에서만 표시 */}
-          {mode === "player" && <Rocket />}
+          {mode === "player" && <Rocket forwardAudioRef={forwardAudioRef} shiftAudioRef={shiftAudioRef} />}
         </Suspense>
 
         {/* 행성 보기(flyTo) 전용 리그 (Player 모드에서만 작동) */}
@@ -726,4 +736,28 @@ function CoinCounter() {
       `}</style>
     </div>
   );
+}
+
+function BackgroundSound({ audioRef, volume }: { audioRef: React.RefObject<HTMLAudioElement>; volume: number }) {
+  const isSoundOn = useStore((s) => s.isSoundOn);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isSoundOn) {
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
+    }
+  }, [isSoundOn, audioRef]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.volume = volume;
+    }
+  }, [volume, audioRef]);
+
+  return null;
 }

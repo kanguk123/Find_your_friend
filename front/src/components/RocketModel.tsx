@@ -121,10 +121,10 @@ function RocketModelInner({ scaleToMeters = 0.2, rotation = [0, 0, 0] }: Props) 
     }
 
     // Apply opacity to all materials
-    groupRef.current.traverse((child: any) => {
+    groupRef.current.traverse((child) => {
       if (child.isMesh && child.material) {
         if (Array.isArray(child.material)) {
-          child.material.forEach((mat: any) => {
+          child.material.forEach((mat) => {
             mat.transparent = true;
             mat.opacity = opacityRef.current;
           });
@@ -141,7 +141,7 @@ function RocketModelInner({ scaleToMeters = 0.2, rotation = [0, 0, 0] }: Props) 
     if (!scene) return null;
 
     const clone = scene.clone(true);
-    clone.traverse((o: any) => {
+    clone.traverse((o) => {
       if (o.isMesh) {
         o.castShadow = true;
         o.receiveShadow = true;
@@ -161,7 +161,7 @@ function RocketModelInner({ scaleToMeters = 0.2, rotation = [0, 0, 0] }: Props) 
     clone.position.y -= after.min.y;
 
     return clone;
-  }, [scene, scaleToMeters, displayLevel]);
+  }, [scene, scaleToMeters]);
 
   if (!rocket) {
     console.warn("RocketModel: Rocket mesh not ready yet");

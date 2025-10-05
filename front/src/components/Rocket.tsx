@@ -45,7 +45,13 @@ const TARGET_LERP = 0.2;
 const START_ALT = 0.015;
 const visualRotation: [number, number, number] = [-Math.PI / 2, 0, 0];
 
-export default function Rocket() {
+export default function Rocket({
+  forwardAudioRef,
+  shiftAudioRef,
+}: {
+  forwardAudioRef: React.RefObject<HTMLAudioElement>;
+  shiftAudioRef: React.RefObject<HTMLAudioElement>;
+}) {
   const physRef = useRef<Group>(null!);
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
 
@@ -69,10 +75,13 @@ export default function Rocket() {
   const setRocketCameraMode = useStore((s) => s.setRocketCameraMode);
   const rocketCameraTarget = useStore((s) => s.rocketCameraTarget);
   const setRocketCameraTarget = useStore((s) => s.setRocketCameraTarget);
+  const isSoundOn = useStore((s) => s.isSoundOn);
+  const effectsVolume = useStore((s) => s.effectsVolume);
 
   const key = useKey();
   const euler = useMemo(() => new Euler(0, 0, 0, "YXZ"), []);
   const vel = useRef(0);
+  const thrust = useRef(0);
   const boosting = useRef(false);
   const flameIntensity = useRef(0); // Use ref to avoid re-renders
 
@@ -155,16 +164,35 @@ export default function Rocket() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flyToTargetRaw]);
 
+  useEffect(() => {
+    if (!isSoundOn) {
+      forwardAudioRef.current?.pause();
+      shiftAudioRef.current?.pause();
+    }
+  }, [isSoundOn, forwardAudioRef, shiftAudioRef]);
+
+  useEffect(() => {
+    if (forwardAudioRef.current) {
+      forwardAudioRef.current.volume = effectsVolume;
+    }
+    if (shiftAudioRef.current) {
+      shiftAudioRef.current.volume = effectsVolume;
+    }
+  }, [effectsVolume, forwardAudioRef, shiftAudioRef]);
+
   function updateInputs(dt: number) {
-    let thrust = 0;
+    thrust.current = 0;
     let anyInput = false;
 
     if (key.down("KeyW")) {
-      thrust += THRUST_ACCEL;
+      thrust.current += THRUST_ACCEL;
       anyInput = true;
+      if (isSoundOn) forwardAudioRef.current?.play().catch(() => {});
+    } else {
+      forwardAudioRef.current?.pause();
     }
     if (key.down("KeyS")) {
-      thrust -= THRUST_ACCEL;
+      thrust.current -= THRUST_ACCEL;
       anyInput = true;
     }
 
@@ -177,17 +205,18 @@ export default function Rocket() {
         setFlyToTarget(undefined);
         setFollowRocket(true);
         setIsCameraMoving(false);
-        console.log("로켓 시점으로 돌아갑니다");
         anyInput = true;
       }
     }
 
     // Shift 키: 부스트 + 화염 효과
     if (key.down("ShiftLeft") || key.down("ShiftRight")) {
-      boosting.current = thrust >= 0 || vel.current >= 0;
+      boosting.current = thrust.current >= 0 || vel.current >= 0;
       anyInput = true;
+      if (isSoundOn) shiftAudioRef.current?.play().catch(() => {});
     } else {
       boosting.current = false;
+      shiftAudioRef.current?.pause();
     }
 
     if (key.down("ArrowUp")) {
@@ -217,7 +246,7 @@ export default function Rocket() {
     vel.current =
       Math.sign(vel.current) *
       Math.max(0, Math.abs(vel.current) - DRAG_K * Math.abs(vel.current) * dt);
-    vel.current += thrust * dt;
+    vel.current += thrust.current * dt;
     if (boosting.current) vel.current += BOOST_ACCEL * dt;
 
     const vmaxF = MAX_FWD + (boosting.current ? BOOST_MAX : 0);
@@ -296,9 +325,16 @@ export default function Rocket() {
     updateInputs(dt);
     updateKinematics(dt);
 
-    // Update flame intensity based on boost state
+    // Update flame intensity based on thrust
+    flameIntensity.current = Math.max(
+      0,
+      Math.min(1, thrust.current / THRUST_ACCEL)
+    );
+
     // Only show flame when Shift is pressed
-    flameIntensity.current = boosting.current ? 1.0 : 0.0;
+    if (boosting.current) {
+      flameIntensity.current = 1.0;
+    }
   });
 
   // 로켓 레벨에 따른 회전 조정

@@ -22,7 +22,7 @@ export default function SpaceXRocket({
 
   const rocket = useMemo(() => {
     const clone = scene.clone(true);
-    clone.traverse((o: any) => {
+    clone.traverse((o) => {
       if (o.isMesh) {
         o.castShadow = true;
         o.receiveShadow = true;
