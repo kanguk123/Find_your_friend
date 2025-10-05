@@ -57,6 +57,11 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
     setIsCameraMoving,
     planets,
     mode,
+    followRocket,
+    collectCoin,
+    addFloatingText,
+    collectedPlanets,
+    addCollectedPlanet,
   } = useStore();
   // useStore에서 외계행성 데이터 가져오기
   const exoplanets = useMemo(
@@ -103,6 +108,28 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       const currentSelectedId = useStore.getState().selectedId;
       if (currentSelectedId !== p.id) {
         clickHandler.handleClick(p);
+
+        // Player 모드 + 로켓 시점 + 90% 이상 확률 + 아직 수집 안한 행성 = 코인 획득
+        if (
+          mode === "player" &&
+          followRocket &&
+          (p.score || 0) >= 0.9 &&
+          !collectedPlanets.has(p.id)
+        ) {
+          // 무조건 1코인
+          collectCoin();
+
+          // 행성 위치 계산
+          const [px, py, pz] = sph2cart(p.ra!, p.dec!, radius + SURFACE_OFFSET);
+
+          // 플로팅 텍스트 표시
+          addFloatingText("+1 🪙", [px, py, pz]);
+
+          // 행성을 수집 완료로 마킹
+          addCollectedPlanet(p.id);
+
+          console.log(`🎉 Collected 1 coin from ${p.name} (${((p.score || 0) * 100).toFixed(1)}%)`);
+        }
 
         // PlanetCard 표시 - API에서 상세 정보 가져오기
         setShowPlanetCard(true);
@@ -248,6 +275,11 @@ export default function ExoplanetPoints({ radius = 25 }: { radius?: number }) {
       setIsCameraMoving,
       setBodyPositions,
       mode,
+      followRocket,
+      collectCoin,
+      addFloatingText,
+      collectedPlanets,
+      addCollectedPlanet,
     ]
   );
 

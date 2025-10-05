@@ -22,7 +22,7 @@ export default function PlanetCard({ planet, onClose }: Props) {
   };
 
   return (
-    <div className="fixed bottom-3 right-3 z-50 pointer-events-auto">
+    <div className="fixed bottom-3 right-3 z-[100] pointer-events-auto">
       <div className="bg-black/90 border border-white/20 rounded-xl p-3 backdrop-blur-lg shadow-2xl w-80 max-h-[60vh] overflow-y-auto">
         {/* 헤더 */}
         <div className="flex items-start justify-between mb-3">

@@ -1,28 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+type Props = {
+  isExpanded: boolean;
+  onToggle: () => void;
+};
 
-export default function ModelAccuracy() {
-  const [isExpanded, setIsExpanded] = useState(false);
+export default function ModelAccuracy({ isExpanded, onToggle }: Props) {
   // 실제로는 백엔드에서 가져올 데이터
-  const [accuracy, setAccuracy] = useState({
+  const accuracy = {
     training: 0.92,
     validation: 0.88,
     testing: 0.85,
-  });
+  };
 
-  const [performance, setPerformance] = useState({
+  const performance = {
     inferenceTime: 0.045, // 초 단위
     trainingTime: 1247, // 초 단위
     epochs: 100,
     batchSize: 32,
-  });
+  };
 
   return (
     <div className="bg-black/60 border border-white/15 rounded-xl backdrop-blur-sm overflow-hidden">
       {/* Header */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={onToggle}
         className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
       >
         <h3 className="text-sm font-semibold text-white/80 uppercase tracking-wider">

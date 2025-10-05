@@ -110,6 +110,8 @@ type Store = {
   floatingTexts: Array<{ id: string; text: string; position: Vec3; timestamp: number }>;
   addFloatingText: (text: string, position: Vec3) => void;
   removeFloatingText: (id: string) => void;
+  collectedPlanets: Set<string>; // 코인을 획득한 행성 ID 목록
+  addCollectedPlanet: (planetId: string) => void;
 };
 
 export const useStore = create<Store>((set) => ({
@@ -249,4 +251,11 @@ export const useStore = create<Store>((set) => ({
     set((state) => ({
       floatingTexts: state.floatingTexts.filter((ft) => ft.id !== id),
     })),
+  collectedPlanets: new Set<string>(),
+  addCollectedPlanet: (planetId) =>
+    set((state) => {
+      const newCollected = new Set(state.collectedPlanets);
+      newCollected.add(planetId);
+      return { collectedPlanets: newCollected };
+    }),
 }));

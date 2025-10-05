@@ -3,9 +3,13 @@
 import { useState } from "react";
 import { useStore } from "@/state/useStore";
 
-export default function HyperparameterPanel() {
+type Props = {
+  isExpanded: boolean;
+  onToggle: () => void;
+};
+
+export default function HyperparameterPanel({ isExpanded, onToggle }: Props) {
   const { hyperparameters, setHyperparameters } = useStore();
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -28,7 +32,7 @@ export default function HyperparameterPanel() {
     <div className="bg-black/60 border border-white/15 rounded-xl backdrop-blur-sm overflow-hidden">
       {/* Header */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={onToggle}
         className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
       >
         <h3 className="text-sm font-semibold text-white/80 uppercase tracking-wider">

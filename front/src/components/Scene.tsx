@@ -275,6 +275,7 @@ function CameraRig() {
 
 export default function Scene() {
   const [autoRotate, setAutoRotate] = useState(true);
+  const [expandedPanel, setExpandedPanel] = useState<'hyperparameter' | 'model' | null>(null);
   const {
     mode,
     selectedId,
@@ -488,10 +489,16 @@ export default function Scene() {
       {mode === "expert" && (
         <div className="pointer-events-none absolute top-16 right-3 z-50 w-80 space-y-3 max-h-[calc(100vh-16rem)] overflow-y-auto">
           <div className="pointer-events-auto">
-            <HyperparameterPanel />
+            <HyperparameterPanel
+              isExpanded={expandedPanel === 'hyperparameter'}
+              onToggle={() => setExpandedPanel(expandedPanel === 'hyperparameter' ? null : 'hyperparameter')}
+            />
           </div>
           <div className="pointer-events-auto">
-            <ModelAccuracy />
+            <ModelAccuracy
+              isExpanded={expandedPanel === 'model'}
+              onToggle={() => setExpandedPanel(expandedPanel === 'model' ? null : 'model')}
+            />
           </div>
         </div>
       )}
@@ -586,19 +593,45 @@ export default function Scene() {
 }
 
 /**
- * CoinCounter - Displays current coin count and rocket level
+ * CoinCounter - Displays current coin count and rocket level with animations
  */
 function CoinCounter() {
   const { coinCount, rocketLevel } = useStore();
+  const [prevCoinCount, setPrevCoinCount] = useState(coinCount);
+  const [showPulse, setShowPulse] = useState(false);
+  const [showCoinFloat, setShowCoinFloat] = useState(false);
+
+  useEffect(() => {
+    if (coinCount > prevCoinCount) {
+      // Coin collected animation
+      setShowPulse(true);
+      setShowCoinFloat(true);
+
+      const pulseTimeout = setTimeout(() => setShowPulse(false), 500);
+      const floatTimeout = setTimeout(() => setShowCoinFloat(false), 1000);
+
+      setPrevCoinCount(coinCount);
+
+      return () => {
+        clearTimeout(pulseTimeout);
+        clearTimeout(floatTimeout);
+      };
+    }
+  }, [coinCount, prevCoinCount]);
 
   return (
     <div className="pointer-events-none absolute top-3 right-3 z-50">
-      <div className="pointer-events-auto bg-black/70 border border-yellow-500/50 rounded-xl p-4 backdrop-blur-sm">
+      <div className={`pointer-events-auto bg-black/70 border border-yellow-500/50 rounded-xl p-4 backdrop-blur-sm transition-all duration-300 ${showPulse ? 'scale-110 border-yellow-400' : ''}`}>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-3xl">🪙</span>
+          <div className="flex items-center gap-2 relative">
+            <span className={`text-3xl transition-transform duration-300 ${showPulse ? 'scale-125 rotate-12' : ''}`}>🪙</span>
+            {showCoinFloat && (
+              <div className="absolute top-0 left-0 animate-coin-float pointer-events-none">
+                <span className="text-2xl">+1</span>
+              </div>
+            )}
             <div>
-              <div className="text-yellow-400 text-2xl font-bold">
+              <div className={`text-yellow-400 text-2xl font-bold transition-all duration-300 ${showPulse ? 'scale-110' : ''}`}>
                 {coinCount}
               </div>
               <div className="text-white/60 text-xs">Coins</div>
@@ -620,6 +653,26 @@ function CoinCounter() {
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes coin-float {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-30px) scale(1.5);
+          }
+        }
+
+        .animate-coin-float {
+          animation: coin-float 1s ease-out forwards;
+          color: #FFD700;
+          font-weight: bold;
+          text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        }
+      `}</style>
     </div>
   );
 }
