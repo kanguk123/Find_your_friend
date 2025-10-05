@@ -267,15 +267,36 @@ export default function PlanetCard({ planet, onClose }: Props) {
             <h3 className="text-xs font-semibold text-white/80 uppercase tracking-wider">
               Features
             </h3>
-            <div className="space-y-1">
-              {Object.entries(getProp<Record<string, number | undefined>>("features") || {}).map(([key, value]) => (
-                value !== undefined && value !== null && typeof value === "number" && (
-                  <div key={key} className="flex items-center justify-between text-xs">
-                    <span className="text-white/60">{key}</span>
+            <div className="space-y-1 max-h-60 overflow-y-auto">
+              {Object.entries(getProp<Record<string, number | undefined>>("features") || {}).map(([_, value], index) => {
+                // CSV의 컬럼명 순서대로 feature 이름 매핑 (ra부터 st_tmagerr2까지)
+                const featureNames = [
+                  "ra", "dec", "koi_period", "koi_period_err1", "koi_period_err2", "koi_time0bk", "koi_time0bk_err1", "koi_time0bk_err2",
+                  "koi_time0", "koi_time0_err1", "koi_time0_err2", "koi_impact", "koi_impact_err1", "koi_impact_err2", "koi_duration",
+                  "koi_duration_err1", "koi_duration_err2", "koi_depth", "koi_depth_err1", "koi_depth_err2", "koi_ror", "koi_ror_err1",
+                  "koi_ror_err2", "koi_srho", "koi_srho_err1", "koi_srho_err2", "koi_sma", "koi_incl", "koi_teq", "koi_dor", "koi_dor_err1",
+                  "koi_dor_err2", "koi_ldm_coeff2", "koi_ldm_coeff1", "koi_max_sngle_ev", "koi_max_mult_ev", "koi_model_snr", "koi_num_transits",
+                  "koi_steff", "koi_steff_err1", "koi_steff_err2", "koi_slogg", "koi_slogg_err1", "koi_slogg_err2", "koi_smet", "koi_smet_err1",
+                  "koi_smet_err2", "koi_srad", "koi_srad_err1", "koi_srad_err2", "koi_smass", "koi_smass_err1", "koi_smass_err2", "pl_rade",
+                  "pl_radeerr1", "pl_radeerr2", "pl_radj", "pl_radjerr1", "pl_radjerr2", "pl_tranmid", "pl_tranmiderr1", "pl_tranmiderr2",
+                  "pl_imppar", "pl_impparerr1", "pl_impparerr2", "pl_trandep", "pl_trandeperr1", "pl_trandeperr2", "pl_ratror", "pl_ratrorerr1",
+                  "pl_ratrorerr2", "st_teff", "st_tefferr1", "st_tefferr2", "st_rad", "st_raderr1", "st_raderr2", "st_mass", "st_masserr1",
+                  "st_masserr2", "st_met", "st_meterr1", "st_meterr2", "st_logg", "st_loggerr1", "st_loggerr2", "st_dens", "st_denserr1",
+                  "st_denserr2", "pl_eqt", "st_teff.1", "st_tefferr1.1", "st_tefferr2.1", "st_logg.1", "st_loggerr1.1", "st_loggerr2.1",
+                  "pl_trandurherr1", "pl_trandurherr2", "st_dist", "st_disterr1", "st_disterr2", "st_rad.1", "st_raderr1.1", "st_raderr2.1",
+                  "pl_insol", "st_pmdec", "st_pmdecerr1", "st_pmdecerr2", "st_rad.2", "st_raderr1.2", "st_raderr2.2", "st_pmra", "st_pmraerr1",
+                  "st_pmraerr2", "pl_orbper", "pl_orbpererr1", "pl_orbpererr2", "st_tmag", "st_tmagerr1", "st_tmagerr2"
+                ];
+                // feature_122 이후 제외 (index 120 이후)
+                if (index >= 120) return null;
+                const featureName = featureNames[index] || `feature_${index}`;
+                return value !== undefined && value !== null && typeof value === "number" && (
+                  <div key={index} className="flex items-center justify-between text-xs">
+                    <span className="text-white/60 font-mono">{featureName}</span>
                     <span className="text-white/80">{value.toFixed(3)}</span>
                   </div>
-                )
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
