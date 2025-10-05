@@ -5,10 +5,13 @@ import { useStore } from "@/state/useStore";
 import { SUN, PLANETS } from "@/data/solar";
 
 export default function FavoriteFilter() {
-    const { showOnlyFavorites, setShowOnlyFavorites, favorites, bodyPositions, setSelectedId, setFlyToTarget, setFollowRocket, toggleFavorite } = useStore();
+    const { showOnlyFavorites, setShowOnlyFavorites, favorites, bodyPositions, setSelectedId, setFlyToTarget, setFollowRocket, toggleFavorite, planets } = useStore();
     const [showList, setShowList] = useState(false);
 
-    const allBodies = useMemo(() => [SUN, ...PLANETS], []);
+    // 태양계 행성 + 외계행성 모두 포함
+    const allBodies = useMemo(() => {
+        return planets.length > 0 ? planets : [SUN, ...PLANETS];
+    }, [planets]);
 
     const favoriteList = useMemo(() => {
         return allBodies.filter(body => favorites.has(body.id));
@@ -22,26 +25,49 @@ export default function FavoriteFilter() {
         }
 
         setSelectedId(id);
-        const pos = bodyPositions[id];
-        if (!pos) return;
-        const [x, y, z] = pos;
-
         const body = allBodies.find(b => b.id === id);
         if (!body) return;
 
-        const planetRadius = body.id === "sun" ? body.radius : body.radius * 0.62;
-        const cameraDistance = planetRadius * 4.5;
+        // 외계행성인지 확인 (ra, dec가 있으면 외계행성)
+        const isExoplanet = body.ra !== undefined && body.dec !== undefined;
 
-        const len = Math.hypot(x, z) || 1;
-        const normalX = x / len;
-        const normalZ = z / len;
+        if (isExoplanet) {
+            // 외계행성: PlanetListPanel과 동일한 로직 사용
+            const pos = bodyPositions[id];
+            if (!pos) {
+                console.warn("외계행성 위치를 찾을 수 없습니다:", id);
+                return;
+            }
+            const [x, y, z] = pos;
+            const len = Math.hypot(x, y, z) || 1;
+            const n = [x / len, y / len, z / len];
+            const dist = len * 1.2;
+            const targetPos = [n[0] * dist, n[1] * dist, n[2] * dist];
 
-        const camX = x + normalX * cameraDistance;
-        const camY = y + cameraDistance * 0.15;
-        const camZ = z + normalZ * cameraDistance;
+            setFlyToTarget(targetPos as [number, number, number]);
+            setFollowRocket(false);
+        } else {
+            // 태양계 행성: 기존 로직
+            const pos = bodyPositions[id];
+            if (!pos) return;
+            const [x, y, z] = pos;
 
-        setFlyToTarget([camX, camY, camZ]);
-        setFollowRocket(false);
+            const bodyData = body as { id: string; radius?: number };
+            const planetRadius = body.id === "sun" ? (bodyData.radius || 1) : (bodyData.radius || 1) * 0.62;
+            const cameraDistance = planetRadius * 4.5;
+
+            const len = Math.hypot(x, z) || 1;
+            const normalX = x / len;
+            const normalZ = z / len;
+
+            const camX = x + normalX * cameraDistance;
+            const camY = y + cameraDistance * 0.15;
+            const camZ = z + normalZ * cameraDistance;
+
+            setFlyToTarget([camX, camY, camZ]);
+            setFollowRocket(false);
+        }
+
         setShowList(false);
     }, [bodyPositions, setSelectedId, setFlyToTarget, setFollowRocket, allBodies]);
 
