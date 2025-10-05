@@ -6,18 +6,11 @@ type Props = {
 };
 
 export default function ModelAccuracy({ isExpanded, onToggle }: Props) {
-  // 실제로는 백엔드에서 가져올 데이터
-  const accuracy = {
-    training: 0.92,
-    validation: 0.88,
-    testing: 0.85,
-  };
-
-  const performance = {
-    inferenceTime: 0.045, // 초 단위
-    trainingTime: 1247, // 초 단위
-    epochs: 100,
-    batchSize: 32,
+  // 모델 성능 지표 - precision, recall, f1-score만 표시
+  const modelMetrics = {
+    precision: 0.94,
+    recall: 0.93,
+    f1Score: 0.93,
   };
 
   return (
@@ -50,12 +43,13 @@ export default function ModelAccuracy({ isExpanded, onToggle }: Props) {
       {/* Content */}
       {isExpanded && (
         <div className="px-4 pb-4 space-y-3 max-h-48 overflow-y-auto">
-          {Object.entries(accuracy).map(([key, value]) => (
+          {/* 모델 성능 지표 - precision, recall, f1-score */}
+          {Object.entries(modelMetrics).map(([key, value]) => (
             <div key={key}>
               <div className="flex justify-between text-xs text-white/70 mb-1">
-                <span className="capitalize">{key} Accuracy</span>
+                <span className="capitalize font-semibold">{key}</span>
                 <span className="font-mono text-green-400">
-                  {(value * 100).toFixed(1)}%
+                  {value.toFixed(2)}
                 </span>
               </div>
               <div className="h-2 bg-white/10 rounded-full overflow-hidden">
@@ -66,84 +60,6 @@ export default function ModelAccuracy({ isExpanded, onToggle }: Props) {
               </div>
             </div>
           ))}
-
-          {/* Performance Metrics */}
-          <div className="mt-3 pt-3 border-t border-white/10">
-            <h4 className="text-xs font-semibold text-white/80 mb-3 uppercase tracking-wider">
-              Performance Metrics
-            </h4>
-
-            {/* Inference Time */}
-            <div className="mb-3">
-              <div className="flex justify-between text-xs text-white/70 mb-1">
-                <span>Inference Time</span>
-                <span className="font-mono text-blue-400">
-                  {performance.inferenceTime < 1
-                    ? `${(performance.inferenceTime * 1000).toFixed(1)}ms`
-                    : `${performance.inferenceTime.toFixed(3)}s`}
-                </span>
-              </div>
-              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500"
-                  style={{
-                    width: `${Math.min(
-                      performance.inferenceTime * 1000,
-                      100
-                    )}%`,
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Training Time */}
-            <div className="mb-3">
-              <div className="flex justify-between text-xs text-white/70 mb-1">
-                <span>Training Time</span>
-                <span className="font-mono text-purple-400">
-                  {performance.trainingTime < 60
-                    ? `${performance.trainingTime.toFixed(1)}s`
-                    : performance.trainingTime < 3600
-                    ? `${(performance.trainingTime / 60).toFixed(1)}m`
-                    : `${(performance.trainingTime / 3600).toFixed(1)}h`}
-                </span>
-              </div>
-              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-500"
-                  style={{
-                    width: `${Math.min(
-                      (performance.trainingTime / 3600) * 100,
-                      100
-                    )}%`,
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Additional Info */}
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-white/5 rounded-lg p-2">
-                <div className="text-white/50">Epochs</div>
-                <div className="font-mono text-orange-400">
-                  {performance.epochs}
-                </div>
-              </div>
-              <div className="bg-white/5 rounded-lg p-2">
-                <div className="text-white/50">Batch Size</div>
-                <div className="font-mono text-orange-400">
-                  {performance.batchSize}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-3 pt-3 border-t border-white/10">
-            <div className="text-xs text-white/50">Last Updated</div>
-            <div className="text-sm text-white/80 font-mono">
-              {new Date().toLocaleString()}
-            </div>
-          </div>
         </div>
       )}
     </div>
