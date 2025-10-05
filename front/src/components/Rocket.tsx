@@ -316,17 +316,22 @@ export default function Rocket() {
       />
 
       <group ref={physRef} visible={visible}>
-        <hemisphereLight intensity={0.12} />
+        {/* 로켓 주변 조명 - 로켓과 함께 움직임 */}
+        <pointLight position={[0, 0, 0]} intensity={2.5} distance={3} decay={2} color="#ffffff" />
+        <pointLight position={[0.3, 0, 0]} intensity={1.2} distance={2} decay={2} color="#ffffff" />
+        <pointLight position={[-0.3, 0, 0]} intensity={1.2} distance={2} decay={2} color="#ffffff" />
+        <hemisphereLight intensity={0.3} />
+
         <group rotation={visualRotation}>
           <RocketModel scaleToMeters={0.2} rotation={[0, Math.PI / 6, 0]} />
-          {/* Rocket flame - positioned at the back of the rocket */}
-          {visible && (
-            <RocketFlame
-              intensity={flameIntensity.current}
-              position={[0, -0.15, 0]}
-            />
-          )}
         </group>
+        {/* Rocket flame - positioned at the back of the rocket, aligned with rocket direction */}
+        {visible && (
+          <RocketFlame
+            intensity={flameIntensity.current}
+            position={[0, 0, 0.05]}
+          />
+        )}
       </group>
     </>
   );
