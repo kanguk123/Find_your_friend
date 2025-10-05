@@ -7,21 +7,20 @@ export default function TrainingPage() {
   const [isTraining, setIsTraining] = useState(false);
   const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [downloadFilename, setDownloadFilename] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDownloadSample = () => {
-    const sampleCSV = `name,ra,dec,teq,score,mass,radius,orbital_period,stellar_flux
-Kepler-186f,346.0,44.5,188,0.85,1.17,1.11,129.9,0.29
-Proxima Centauri b,217.5,-62.7,234,0.75,1.27,1.07,11.2,0.65
-TRAPPIST-1e,346.6,-5.0,251,0.92,0.62,0.92,6.1,0.66
-Kepler-452b,294.2,44.3,265,0.68,5.0,1.6,384.8,1.1
-LHS 1140 b,10.5,-15.0,230,0.88,6.6,1.4,24.7,0.46`;
+    // NASA Kepler 데이터셋 형식 (122 features)
+    const sampleCSV = `rowid,ra,dec,koi_period,koi_period_err1,koi_period_err2,koi_time0bk,koi_time0bk_err1,koi_time0bk_err2,koi_time0,koi_time0_err1,koi_time0_err2,koi_impact,koi_impact_err1,koi_impact_err2,koi_duration,koi_duration_err1,koi_duration_err2,koi_depth,koi_depth_err1,koi_depth_err2,koi_ror,koi_ror_err1,koi_ror_err2,koi_srho,koi_srho_err1,koi_srho_err2,koi_sma,koi_incl,koi_teq,koi_dor,koi_dor_err1,koi_dor_err2,koi_ldm_coeff2,koi_ldm_coeff1,koi_max_sngle_ev,koi_max_mult_ev,koi_model_snr,koi_num_transits,koi_steff,koi_steff_err1,koi_steff_err2,koi_slogg,koi_slogg_err1,koi_slogg_err2,koi_smet,koi_smet_err1,koi_smet_err2,koi_srad,koi_srad_err1,koi_srad_err2,koi_smass,koi_smass_err1,koi_smass_err2,pl_rade,pl_radeerr1,pl_radeerr2,pl_radj,pl_radjerr1,pl_radjerr2,pl_tranmid,pl_tranmiderr1,pl_tranmiderr2,pl_imppar,pl_impparerr1,pl_impparerr2,pl_trandep,pl_trandeperr1,pl_trandeperr2,pl_ratror,pl_ratrorerr1,pl_ratrorerr2,st_teff,st_tefferr1,st_tefferr2,st_rad,st_raderr1,st_raderr2,st_mass,st_masserr1,st_masserr2,st_met,st_meterr1,st_meterr2,st_logg,st_loggerr1,st_loggerr2,st_dens,st_denserr1,st_denserr2,pl_eqt,st_teff.1,st_tefferr1.1,st_tefferr2.1,st_logg.1,st_loggerr1.1,st_loggerr2.1,pl_trandurherr1,pl_trandurherr2,st_dist,st_disterr1,st_disterr2,st_rad.1,st_raderr1.1,st_raderr2.1,pl_insol,st_pmdec,st_pmdecerr1,st_pmdecerr2,st_rad.2,st_raderr1.2,st_raderr2.2,st_pmra,st_pmraerr1,st_pmraerr2,pl_orbper,pl_orbpererr1,pl_orbpererr2,st_tmag,st_tmagerr1,st_tmagerr2,pl_trandurherr3,pl_trandurh
+1,291.93423,48.141651,9.48803557,2.78e-05,-2.78e-05,170.53875,0.00216,-0.00216,2455003.539,0.00216,-0.00216,0.146,0.318,-0.146,2.9575,0.0819,-0.0819,616.0,19.5,-19.5,0.022344,0.000832,-0.000528,3.20796,0.33173,-1.09986,0.0853,89.66,793.0,24.81,2.6,-2.6,0.2291,0.4603,5.135849,28.47082,35.8,142.0,5455.0,81.0,-81.0,4.467,0.064,-0.096,0.14,0.15,-0.15,0.927,0.105,-0.061,0.919,0.052,-0.046,9.75677598697376,1.9111994289568224,-1.8865112967923687,0.755270481752285,0.25629403435746445,-0.24826669117769312,2458821.0386662656,0.017478979745478275,-0.017773547748461675,0.4381592632639355,0.1915559198156682,-0.19947930322580645,6488.647363468292,421.8151631222811,-421.81511935972554,0.06149085530856006,0.015048973228648026,-0.01324384852546917,5609.113771812081,180.5956894168621,-180.48960496684688,1.1759922638100155,0.11795472424429365,-0.12180580160692211,0.8730237706945765,0.11331790955806784,-0.09072538762886598,-0.029684864546525323,0.09758986202759448,-0.09809736052789442,4.338743296010436,0.14819090928420497,-0.1487003070655045,4.692353332624867,0.5478327806122449,-0.5156926466836735,1282.5539722337169,5791.63068718493,205.61936297439445,-205.61936297439445,4.30529042671343,0.17485606393442624,-0.17485606393442624,0.36256119457455116,-0.36256119457455116,478.2956283097274,19.538125880434784,-19.538125880434784,1.4038391917547275,0.0744430372320028,-0.0744430372320028,2245.7707804001466,-9.180085789821547,0.22283159286186385,-0.22283159286186385,1.4038391917547275,0.0744430372320028,-0.0744430372320028,-0.5760165234633179,0.22882524785194977,-0.22882524785194977,17.74653113644626,0.0003098854915433403,-0.0003098854915433403,11.563821223795298,0.009960774126509937,-0.009960774126509937,-16.04035411784062,3.0592803569944147`;
 
     const blob = new Blob([sampleCSV], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "exoplanet_sample.csv";
+    a.download = "planet_sample.csv";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -32,41 +31,81 @@ LHS 1140 b,10.5,-15.0,230,0.88,6.6,1.4,24.7,0.46`;
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // 이전 다운로드 URL 정리
+    if (downloadUrl) {
+      URL.revokeObjectURL(downloadUrl);
+      setDownloadUrl(null);
+    }
+
     setIsTraining(true);
     setProgress(0);
     setLogs([]);
 
-    // 시뮬레이션: 실제로는 백엔드 API 호출
-    const steps = [
-      "Loading dataset...",
-      "Preprocessing data...",
-      "Splitting train/validation/test sets...",
-      "Initializing neural network...",
-      "Training epoch 1/100...",
-      "Training epoch 25/100...",
-      "Training epoch 50/100...",
-      "Training epoch 75/100...",
-      "Training epoch 100/100...",
-      "Evaluating model...",
-      "Saving model weights...",
-      "Training completed!",
-    ];
-
-    for (let i = 0; i < steps.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 800));
+    const addLog = (message: string) => {
       setLogs((prev) => [
         ...prev,
-        `[${new Date().toLocaleTimeString()}] ${steps[i]}`,
+        `[${new Date().toLocaleTimeString()}] ${message}`,
       ]);
-      setProgress(((i + 1) / steps.length) * 100);
-    }
+    };
 
-    setIsTraining(false);
-    alert("Model training completed successfully!");
+    try {
+      addLog(`📁 Uploading file: ${file.name}`);
+      setProgress(10);
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      // FormData 준비
+      const formData = new FormData();
+      formData.append("file", file);
+
+      addLog("🚀 Sending to AI model...");
+      setProgress(20);
+
+      // 백엔드 API 호출
+      const response = await fetch("http://localhost:8000/upload/identify-planets", {
+        method: "POST",
+        body: formData,
+      });
+
+      setProgress(60);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server error: ${response.status} - ${errorText}`);
+      }
+
+      addLog("✅ AI prediction completed!");
+      setProgress(80);
+
+      // CSV 파일 다운로드 준비
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const filename = `planet_predictions_${file.name}`;
+
+      setDownloadUrl(url);
+      setDownloadFilename(filename);
+
+      addLog(`💾 Labeled CSV ready for download: ${filename}`);
+      addLog("✨ Processing completed successfully!");
+      setProgress(100);
+
+    } catch (error) {
+      addLog(`❌ Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+      console.error("Upload error:", error);
+      alert("Failed to process file. Please check the console for details.");
+    } finally {
+      setIsTraining(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
+  };
+
+  const handleDownloadPredictions = () => {
+    if (!downloadUrl) return;
+
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = downloadFilename;
+    a.click();
   };
 
   return (
@@ -92,10 +131,10 @@ LHS 1140 b,10.5,-15.0,230,0.88,6.6,1.4,24.7,0.46`;
             </div>
             <div>
               <h1 className="text-base sm:text-xl font-bold text-white">
-                Model Training
+                Planet Identify
               </h1>
               <p className="text-[10px] sm:text-xs text-white/60 hidden sm:block">
-                Train custom exoplanet detection model
+                AI-powered exoplanet classification
               </p>
             </div>
           </div>
@@ -144,13 +183,13 @@ LHS 1140 b,10.5,-15.0,230,0.88,6.6,1.4,24.7,0.46`;
               </button>
             </div>
 
-            {/* Upload Training Data */}
+            {/* Planet Identify */}
             <div className="bg-black/40 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
               <h2 className="text-lg font-semibold text-white mb-4">
-                2. Upload Training Data
+                2. Planet Identify
               </h2>
               <p className="text-sm text-white/60 mb-4">
-                Upload your CSV file with exoplanet features to train the model.
+                Upload your CSV file with planet data to get AI predictions.
               </p>
               <input
                 ref={fileInputRef}
@@ -182,15 +221,15 @@ LHS 1140 b,10.5,-15.0,230,0.88,6.6,1.4,24.7,0.46`;
                     d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                   />
                 </svg>
-                {isTraining ? "Training in Progress..." : "Upload & Train"}
+                {isTraining ? "Processing..." : "Planet Identify"}
               </label>
             </div>
 
-            {/* Training Progress */}
+            {/* Processing Progress */}
             {isTraining && (
               <div className="bg-black/40 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
                 <h2 className="text-lg font-semibold text-white mb-4">
-                  Training Progress
+                  Processing Progress
                 </h2>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm text-white/70">
@@ -213,12 +252,12 @@ LHS 1140 b,10.5,-15.0,230,0.88,6.6,1.4,24.7,0.46`;
           {/* Right Panel - Logs */}
           <div className="bg-black/40 border border-white/10 rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
             <h2 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">
-              Training Logs
+              Processing Logs
             </h2>
-            <div className="bg-black/60 border border-white/5 rounded-lg p-3 sm:p-4 h-[300px] sm:h-[500px] overflow-y-auto font-mono text-[10px] sm:text-xs text-green-400">
+            <div className="bg-black/60 border border-white/5 rounded-lg p-3 sm:p-4 h-[300px] sm:h-[400px] overflow-y-auto font-mono text-[10px] sm:text-xs text-green-400">
               {logs.length === 0 ? (
                 <div className="text-white/40 text-center py-8">
-                  Upload a dataset to start training...
+                  Upload a CSV file to identify planets...
                 </div>
               ) : (
                 logs.map((log, idx) => (
@@ -228,22 +267,55 @@ LHS 1140 b,10.5,-15.0,230,0.88,6.6,1.4,24.7,0.46`;
                 ))
               )}
             </div>
+
+            {/* Download Button */}
+            {downloadUrl && (
+              <div className="mt-4">
+                <button
+                  onClick={handleDownloadPredictions}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-500/20 hover:bg-green-500/30 border border-green-400/50 rounded-lg text-green-300 font-medium transition-colors"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                  Download Labeled CSV
+                </button>
+                <p className="text-xs text-white/50 mt-2 text-center">
+                  {downloadFilename}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Info Section */}
         <div className="mt-8 bg-blue-500/10 border border-blue-400/20 rounded-2xl p-6">
           <h3 className="text-sm font-semibold text-blue-300 mb-2">
-            CSV Format Requirements
+            How It Works
           </h3>
-          <p className="text-sm text-white/70">
-            Your CSV must include:{" "}
-            <code className="text-blue-300">name, ra, dec, teq, score</code>{" "}
-            (required) + additional feature columns like{" "}
-            <code className="text-blue-300">
-              mass, radius, orbital_period, stellar_flux
-            </code>{" "}
-            (optional)
+          <p className="text-sm text-white/70 mb-2">
+            1. Upload a CSV file with planet features (122 features from NASA Kepler dataset)
+          </p>
+          <p className="text-sm text-white/70 mb-2">
+            2. AI model processes each row and adds predictions:
+          </p>
+          <ul className="text-sm text-white/70 ml-4 space-y-1">
+            <li>• <code className="text-blue-300">ai_prediction</code>: CONFIRMED or FALSE POSITIVE</li>
+            <li>• <code className="text-blue-300">ai_probability</code>: Confidence score (0.0-1.0)</li>
+            <li>• <code className="text-blue-300">ai_confidence</code>: high, medium, or low</li>
+          </ul>
+          <p className="text-sm text-white/70 mt-2">
+            3. Download the labeled CSV with prediction results
           </p>
         </div>
       </div>
