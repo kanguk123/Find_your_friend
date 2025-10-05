@@ -315,9 +315,27 @@ export default function Rocket() {
 
       <group ref={physRef} visible={visible}>
         {/* 로켓 주변 조명 - 로켓과 함께 움직임 */}
-        <pointLight position={[0, 0, 0]} intensity={2.5} distance={3} decay={2} color="#ffffff" />
-        <pointLight position={[0.3, 0, 0]} intensity={1.2} distance={2} decay={2} color="#ffffff" />
-        <pointLight position={[-0.3, 0, 0]} intensity={1.2} distance={2} decay={2} color="#ffffff" />
+        <pointLight
+          position={[0, 0, 0]}
+          intensity={2.5}
+          distance={3}
+          decay={2}
+          color="#ffffff"
+        />
+        <pointLight
+          position={[0.3, 0, 0]}
+          intensity={1.2}
+          distance={2}
+          decay={2}
+          color="#ffffff"
+        />
+        <pointLight
+          position={[-0.3, 0, 0]}
+          intensity={1.2}
+          distance={2}
+          decay={2}
+          color="#ffffff"
+        />
         <hemisphereLight intensity={0.3} />
 
         <group rotation={visualRotation}>
