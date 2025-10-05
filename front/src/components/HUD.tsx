@@ -19,6 +19,27 @@ export default function HUD({ planet, position }: Props) {
 
     if (!planet || !position) return null;
 
+    // 외계행성 여부 확인
+    const isExoplanet = planet?.ra !== undefined && planet?.dec !== undefined;
+
+    // 태양계 행성: 이름만 표시
+    if (!isExoplanet) {
+        return (
+            <Html
+                position={position}
+                distanceFactor={8}
+                transform
+                occlude
+                className="select-none"
+            >
+                <div className="backdrop-blur-sm bg-black/60 text-white rounded-xl p-3 shadow-xl border border-white/10">
+                    <div className="text-lg font-semibold">{planet.name}</div>
+                </div>
+            </Html>
+        );
+    }
+
+    // 외계행성: 전체 정보 표시
     return (
         <Html
             position={position}
@@ -34,7 +55,7 @@ export default function HUD({ planet, position }: Props) {
                     <div className="text-xs opacity-80 mt-1">Teq: {planet.teq} K</div>
                 )}
                 <div className="mt-2">
-                    <div className="text-xs mb-1">Habitability score</div>
+                    <div className="text-xs mb-1">AI Probability</div>
                     <div className="h-2 w-full bg-white/10 rounded">
                         <div
                             className="h-2 rounded"

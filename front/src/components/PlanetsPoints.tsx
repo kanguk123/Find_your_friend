@@ -46,10 +46,11 @@ export default function PlanetsPoints({ radius = 20 }: { radius?: number }) {
         (p: Planet) => {
             const { setShowPlanetCard, setSelectedPlanetData } = useStore.getState();
 
-            // 행성 선택 및 카드 표시
+            // 행성 선택 (태양계 행성은 PlanetCard 표시 안함)
             setSelectedId(p.id);
-            setShowPlanetCard(true);
-            setSelectedPlanetData(p);
+            // 태양계 행성은 확정적이므로 PlanetCard를 표시하지 않음
+            setShowPlanetCard(false);
+            setSelectedPlanetData(null);
 
             // 카메라 거리는 반경 비례로 잡아줌 (법선 방향으로 0.19*radius 배)
             const ra = p.ra ?? 0;

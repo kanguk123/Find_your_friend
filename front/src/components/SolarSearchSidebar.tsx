@@ -162,11 +162,17 @@ export default function SolarSearchSidebar() {
 
   const handleBlur = () => {
     if (blurTimer.current) window.clearTimeout(blurTimer.current);
-    blurTimer.current = window.setTimeout(() => setFocused(false), 120);
+    blurTimer.current = window.setTimeout(() => {
+      setFocused(false);
+      // input blur 시 키보드 입력 비활성화 해제
+      document.body.dataset.inputFocused = 'false';
+    }, 120);
   };
   const handleFocus = () => {
     if (blurTimer.current) window.clearTimeout(blurTimer.current);
     setFocused(true);
+    // input focus 시 키보드 입력 비활성화
+    document.body.dataset.inputFocused = 'true';
   };
 
   return (

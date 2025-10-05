@@ -11,9 +11,17 @@ export function useKey(): KeyState {
 
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => {
+      // input/textarea에 포커스되어 있으면 무시
+      if (document.body.dataset.inputFocused === 'true') {
+        return;
+      }
       pressed.current.add(e.code);
     };
     const onUp = (e: KeyboardEvent) => {
+      // input/textarea에 포커스되어 있으면 무시
+      if (document.body.dataset.inputFocused === 'true') {
+        return;
+      }
       pressed.current.delete(e.code);
     };
     window.addEventListener("keydown", onDown);

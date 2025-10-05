@@ -111,7 +111,10 @@ function CameraRig() {
       // 키보드 입력에 따른 카메라/타겟 이동 플래그
       const moveSpeed = 0.5; // 이동 속도
 
-      if (mode === "expert") {
+      // input이 포커스되어 있으면 키보드 입력 무시
+      const isInputFocused = document.body.dataset.inputFocused === 'true';
+
+      if (mode === "expert" && !isInputFocused) {
         // Expert 모드에서 선택된 행성이 있을 때
         if (selectedId && bodyPositions[selectedId]) {
           // 행성을 중심으로 회전하도록 target 고정
@@ -152,7 +155,7 @@ function CameraRig() {
             target.x += moveSpeed;
           }
         }
-      } else {
+      } else if (mode === "player" && !isInputFocused) {
         // Player 모드: 기존 상대 이동
         // W/S: 앞뒤 이동 (Panning)
         if (keysPressed["w"] || keysPressed["arrowup"]) {
@@ -274,7 +277,6 @@ function CameraRig() {
 }
 
 export default function Scene() {
-  const [autoRotate, setAutoRotate] = useState(true);
   const [expandedPanel, setExpandedPanel] = useState<'hyperparameter' | 'model' | null>(null);
   const {
     mode,
@@ -294,6 +296,12 @@ export default function Scene() {
   // 키보드 입력 처리
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // input이나 textarea가 포커스되어 있으면 키보드 이벤트 무시
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
       // ESC 키로 카메라 고정 해제 및 선택 해제 (2단계)
       if (e.key === "Escape") {
         const { setIsCameraMoving } = useStore.getState();
@@ -362,6 +370,12 @@ export default function Scene() {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      // input이나 textarea가 포커스되어 있으면 키보드 이벤트 무시
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
       const key = e.key.toLowerCase();
       if (
         [
@@ -438,21 +452,43 @@ export default function Scene() {
         <div className="pointer-events-auto">
           <ScoreSidebar />
         </div>
-
-        <div className="pointer-events-auto flex gap-2">
-          <button
-            onClick={() => setAutoRotate((v) => !v)}
-            className="px-3 py-1.5 rounded-lg bg-black/60 text-white border border-white/15 hover:bg-white/10"
-            aria-pressed={autoRotate}
-            title="Toggle auto-rotate"
-          >
-            {autoRotate ? "Auto-rotate" : "Auto-rotate (paused)"}
-          </button>
-        </div>
       </div>
 
-      {/* 우측 하단 - ESC 키 안내 */}
-      <div className="pointer-events-none absolute bottom-3 right-3 z-40 space-y-3">
+      {/* Planet 정보 카드 */}
+      {selectedId && (() => {
+        // 외계행성: selectedPlanetData 사용
+        if (showPlanetCard && selectedPlanetData) {
+          return (
+            <PlanetCard
+              planet={selectedPlanetData}
+              onClose={() => setShowPlanetCard(false)}
+            />
+          );
+        }
+
+        // 태양계 행성: planets에서 찾아서 표시
+        if (!selectedId.startsWith("exo-")) {
+          const { planets: storePlanets } = useStore.getState();
+          const solarPlanet = storePlanets.find(p => p.id === selectedId);
+
+          if (solarPlanet) {
+            return (
+              <PlanetCard
+                planet={solarPlanet}
+                onClose={() => {
+                  setSelectedId(undefined);
+                  setShowPlanetCard(false);
+                }}
+              />
+            );
+          }
+        }
+
+        return null;
+      })()}
+
+      {/* 좌측 하단 - ESC 키 안내 */}
+      <div className="pointer-events-none absolute bottom-20 left-3 z-40 space-y-3">
         {/* ESC 키 안내 - 카메라가 고정되었을 때 또는 행성이 선택되었을 때 표시 */}
         {(flyToTarget || isCameraMoving || selectedId) && (
           <div className="pointer-events-auto bg-black/60 border border-white/15 rounded-xl p-2 sm:p-3 backdrop-blur-sm text-white text-xs sm:text-sm text-center">
@@ -476,14 +512,6 @@ export default function Scene() {
           </div>
         )}
       </div>
-
-      {/* Planet 정보 카드 - 행성 재선택 시 표시 */}
-      {showPlanetCard && selectedPlanetData && (
-        <PlanetCard
-          planet={selectedPlanetData}
-          onClose={() => setShowPlanetCard(false)}
-        />
-      )}
 
       {/* Expert 모드 전용 패널들 - 우측 상단 */}
       {mode === "expert" && (
@@ -570,7 +598,7 @@ export default function Scene() {
 
         <Suspense fallback={null}>
           <Skybox />
-          <SolarSystem timeScale={autoRotate ? 60 : 0.0001} />
+          <SolarSystem timeScale={60} />
 
           {/* 외계행성 표시 - 태양계 바깥쪽 */}
           <ExoplanetPoints radius={300} />

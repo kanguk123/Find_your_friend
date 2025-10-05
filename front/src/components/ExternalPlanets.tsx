@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Group, Vector3 } from "three";
 import { useFrame } from "@react-three/fiber";
 import { useStore, type Planet } from "@/state/useStore";
-import { ExoplanetClickHandler } from "@/utils/PlanetClickHandler";
+import { SolarPlanetClickHandler } from "@/utils/PlanetClickHandler";
 
 interface ExternalPlanet {
   id: string;
@@ -72,8 +72,8 @@ export default function ExternalPlanets() {
       },
     };
 
-    // 통합된 클릭 핸들러 사용
-    const clickHandler = new ExoplanetClickHandler();
+    // 태양계 행성이므로 SolarPlanetClickHandler 사용 (PlanetCard 표시 안함)
+    const clickHandler = new SolarPlanetClickHandler();
     const position: [number, number, number] = [
       g.position.x,
       g.position.y,

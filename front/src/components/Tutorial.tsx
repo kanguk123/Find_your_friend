@@ -12,15 +12,36 @@ export default function Tutorial({ onStart }: TutorialProps) {
         <div className="space-y-4">
           <div>
             <h3 className="font-semibold text-lg">Movement:</h3>
-            <p className="text-gray-400">- <span className="font-bold text-white">W, A, S, D:</span> Move forward, left, backward, and right.</p>
-            <p className="text-gray-400">- <span className="font-bold text-white">Space:</span> Use booster for extra speed.</p>
-            <p className="text-gray-400">- <span className="font-bold text-white">Q, E:</span> Roll left and right.</p>
-            <p className="text-gray-400">- <span className="font-bold text-white">Arrow Keys (↑↓←→):</span> Pitch and yaw.</p>
+            <p className="text-gray-400">
+              - <span className="font-bold text-white">W, A, S, D:</span> Move
+              forward, left, backward, and right.
+            </p>
+            <p className="text-gray-400">
+              - <span className="font-bold text-white">Shift:</span> Use booster
+              for extra speed.
+            </p>
+            <p className="text-gray-400">
+              - <span className="font-bold text-white">Q, E:</span> Roll left
+              and right.
+            </p>
+            <p className="text-gray-400">
+              - <span className="font-bold text-white">Arrow Keys (↑↓←→):</span>{" "}
+              Pitch and yaw.
+            </p>
           </div>
           <div>
             <h3 className="font-semibold text-lg">Camera:</h3>
-            <p className="text-gray-400">- <span className="font-bold text-white">Mouse Wheel:</span> Zoom in and out.</p>
-            <p className="text-gray-400">- <span className="font-bold text-white">Right Mouse Button (Hold):</span> Orbit around the spaceship.</p>
+            <p className="text-gray-400">
+              - <span className="font-bold text-white">Mouse Wheel:</span> Zoom
+              in and out.
+            </p>
+            <p className="text-gray-400">
+              -{" "}
+              <span className="font-bold text-white">
+                Right Mouse Button (Hold):
+              </span>{" "}
+              Orbit around the spaceship.
+            </p>
           </div>
         </div>
         <div className="text-center mt-8">

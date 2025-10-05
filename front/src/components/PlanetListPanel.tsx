@@ -127,10 +127,9 @@ export default function PlanetListPanel() {
       console.log("PlanetList - First click: selecting planet only");
       clickHandler.handleClick(planet);
 
-      // PlanetCard 표시
-      setShowPlanetCard(true);
-      // 외계행성인 경우 API에서 상세 정보 가져오기
+      // 외계행성인 경우에만 PlanetCard 표시
       if (!isSolarSystem) {
+        setShowPlanetCard(true);
         const planetId = parseInt(planet.id.replace("exo-", ""));
 
         // API에서 상세 정보 가져오기
@@ -188,8 +187,6 @@ export default function PlanetListPanel() {
             };
             setSelectedPlanetData(planetData);
           });
-      } else {
-        setSelectedPlanetData(null);
       }
 
       return; // 첫 번째 클릭에서는 카메라 이동 없이 종료

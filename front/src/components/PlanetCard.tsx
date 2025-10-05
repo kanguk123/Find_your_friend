@@ -26,6 +26,48 @@ export default function PlanetCard({ planet, onClose }: Props) {
   const planetId = isExoplanet ? `exo-${rawId}` : String(rawId);
   const isFavorite = favorites.has(planetId);
 
+  // 태양계 행성: 이름만 표시 (외계행성과 동일한 UI 스타일)
+  if (!isExoplanet) {
+    return (
+      <div className="fixed bottom-3 right-3 z-[100] pointer-events-auto">
+        <div className="bg-black/90 border border-white/20 rounded-xl p-3 backdrop-blur-lg shadow-2xl w-80">
+          {/* 헤더 */}
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold text-white mb-1 truncate">
+                {getProp<string>("name") || String(rawId)}
+              </h2>
+              <p className="text-xs text-white/50 uppercase tracking-wider">
+                {mode === "expert" ? "Research Mode" : "Explorer Mode"}
+              </p>
+            </div>
+            <div className="flex gap-1 flex-shrink-0">
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <svg
+                  className="w-4 h-4 text-white/70"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 외계행성: 전체 정보 표시
   return (
     <div className="fixed bottom-3 right-3 z-[100] pointer-events-auto">
       <div className="bg-black/90 border border-white/20 rounded-xl p-3 backdrop-blur-lg shadow-2xl w-80 max-h-[60vh] overflow-y-auto">
@@ -33,7 +75,7 @@ export default function PlanetCard({ planet, onClose }: Props) {
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-white mb-1 truncate">
-              {getProp<string>("name") || getProp<string>("kepler_name") || (isExoplanet && typeof rawId === "number" ? `Planet ${rawId}` : String(rawId))}
+              {`Planet ${getProp<number>("rowid") || rawId}`}
             </h2>
             <p className="text-xs text-white/50 uppercase tracking-wider">
               {mode === "expert" ? "Research Mode" : "Explorer Mode"}
