@@ -1,34 +1,78 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 
 interface LoadingScreenProps {
   onEnter: () => void;
 }
 
 export default function LoadingScreen({ onEnter }: LoadingScreenProps) {
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [mounted, setMounted] = useState(false);     // 첫 진입 페이드인
+  const [exiting, setExiting] = useState(false);     // 버튼 클릭 후 페이드아웃
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setIsLoaded(true);
+    // 마운트 직후 페이드인
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
   }, []);
 
+  // 페이드아웃이 끝나면 onEnter 호출
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handler = (e: TransitionEvent) => {
+      if (e.propertyName === "opacity" && exiting) {
+        onEnter();
+      }
+    };
+    el.addEventListener("transitionend", handler);
+    return () => el.removeEventListener("transitionend", handler);
+  }, [exiting, onEnter]);
+
   return (
-    <div
-      className={`fixed inset-0 z-[100] transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'} bg-black`}
-    >
-      <div className="relative z-10 flex flex-col items-center justify-center h-full bg-black bg-opacity-50">
-        <div className="text-center">
-          <h1 className="text-5xl sm:text-7xl font-bold text-white drop-shadow-lg mb-4">Welcome to the Cosmos</h1>
-          <p className="text-lg sm:text-xl text-white/80 drop-shadow-md mb-8">Explore the galaxy and beyond.</p>
-          <button
-            onClick={onEnter}
-            className="px-8 py-4 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold rounded-lg transition-all shadow-lg transform hover:scale-105"
-          >
-            Get Started!
-          </button>
+      <div
+          ref={containerRef}
+          className={[
+            "fixed inset-0 z-[100]",
+            "transition-opacity duration-700",
+            mounted && !exiting ? "opacity-100" : "opacity-0",
+            "bg-black",
+          ].join(" ")}
+          role="dialog"
+          aria-modal="true"
+      >
+        {/* 풀스크린 배경 이미지 */}
+        <div className="absolute inset-0 z-0">
+          <Image
+              src="/images/star.jpg"
+              alt="A shining star"
+              fill                     // layout=fill 대체
+              priority                 // 로딩 페이지이므로 우선 로드
+              sizes="100vw"
+              style={{ objectFit: "cover" }}
+          />
+        </div>
+
+        {/* 반투명 오버레이 + 콘텐츠 */}
+        <div className="relative z-10 flex h-full w-full items-center justify-center bg-black/50 px-4">
+          <div className="text-center">
+            <h1 className="mb-4 text-5xl font-bold text-white drop-shadow-lg sm:text-7xl">
+              Welcome to the Cosmos
+            </h1>
+            <p className="mb-8 text-lg text-white/80 drop-shadow-md sm:text-xl">
+              Explore the galaxy and beyond.
+            </p>
+
+            <button
+                onClick={() => setExiting(true)}
+                className="transform rounded-lg bg-gradient-to-r from-purple-500 to-blue-500 px-8 py-4 font-semibold text-white shadow-lg transition-all hover:scale-105 hover:from-purple-600 hover:to-blue-600"
+            >
+              Get Started!
+            </button>
+          </div>
         </div>
       </div>
-    </div>
   );
 }
