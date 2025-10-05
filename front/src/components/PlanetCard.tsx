@@ -13,13 +13,18 @@ export default function PlanetCard({ planet, onClose }: Props) {
 
   if (!planet) return null;
 
-  const planetId = String(planet.id);
-  const isFavorite = favorites.has(planetId);
-
   // 타입 안전한 속성 접근을 위한 헬퍼
   const getProp = <T,>(key: string, defaultValue?: T): T | undefined => {
     return (planet as Record<string, unknown>)[key] as T | undefined ?? defaultValue;
   };
+
+  // 외계행성 ID 처리
+  // API에서 온 데이터는 id가 숫자이고, store의 외계행성은 exo-{id} 형식
+  const rawId = planet.id;
+  const isExoplanet = typeof rawId === "number" && getProp<number>("ra") !== undefined;
+
+  const planetId = isExoplanet ? `exo-${rawId}` : String(rawId);
+  const isFavorite = favorites.has(planetId);
 
   return (
     <div className="fixed bottom-3 right-3 z-[100] pointer-events-auto">
@@ -28,7 +33,7 @@ export default function PlanetCard({ planet, onClose }: Props) {
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-white mb-1 truncate">
-              {getProp<string>("name") || (getProp<number>("rowid") ? `Planet ${getProp<number>("rowid")}` : planetId)}
+              {getProp<string>("name") || getProp<string>("kepler_name") || (isExoplanet && typeof rawId === "number" ? `Planet ${rawId}` : String(rawId))}
             </h2>
             <p className="text-xs text-white/50 uppercase tracking-wider">
               {mode === "expert" ? "Research Mode" : "Explorer Mode"}
@@ -144,19 +149,19 @@ export default function PlanetCard({ planet, onClose }: Props) {
           )}
 
           {/* 3D 좌표 정보 */}
-          {getProp<any>("coordinates_3d") && (
+          {getProp<{ x: number; y: number; z: number }>("coordinates_3d") && (
             <div>
               <div className="text-xs text-white/50 mb-1">3D Coordinates</div>
               <div className="text-xs font-mono text-white">
-                X: {(getProp<any>("coordinates_3d")?.x || 0).toFixed(2)},
-                Y: {(getProp<any>("coordinates_3d")?.y || 0).toFixed(2)},
-                Z: {(getProp<any>("coordinates_3d")?.z || 0).toFixed(2)}
+                X: {(getProp<{ x: number; y: number; z: number }>("coordinates_3d")?.x || 0).toFixed(2)},
+                Y: {(getProp<{ x: number; y: number; z: number }>("coordinates_3d")?.y || 0).toFixed(2)},
+                Z: {(getProp<{ x: number; y: number; z: number }>("coordinates_3d")?.z || 0).toFixed(2)}
               </div>
             </div>
           )}
 
           {/* 거리 정보 */}
-          {getProp<number>("distance") !== undefined && getProp<number>("distance") > 0 && (
+          {getProp<number>("distance") !== undefined && (getProp<number>("distance") || 0) > 0 && (
             <div>
               <div className="text-xs text-white/50 mb-1">Distance</div>
               <div className="text-xs font-mono text-white">
@@ -215,14 +220,14 @@ export default function PlanetCard({ planet, onClose }: Props) {
         </div>
 
         {/* Expert 모드: Features */}
-        {mode === "expert" && planet.features && Object.keys(planet.features).length > 0 && (
+        {mode === "expert" && getProp<Record<string, number | undefined>>("features") && Object.keys(getProp<Record<string, number | undefined>>("features") || {}).length > 0 && (
           <div className="mb-4 space-y-2">
             <h3 className="text-xs font-semibold text-white/80 uppercase tracking-wider">
               Features
             </h3>
             <div className="space-y-1">
-              {Object.entries(planet.features).map(([key, value]) => (
-                value !== undefined && (
+              {Object.entries(getProp<Record<string, number | undefined>>("features") || {}).map(([key, value]) => (
+                value !== undefined && value !== null && typeof value === "number" && (
                   <div key={key} className="flex items-center justify-between text-xs">
                     <span className="text-white/60">{key}</span>
                     <span className="text-white/80">{value.toFixed(3)}</span>
@@ -234,13 +239,13 @@ export default function PlanetCard({ planet, onClose }: Props) {
         )}
 
         {/* Expert 모드: Feature Correlations */}
-        {mode === "expert" && planet.feature_correlations && planet.feature_correlations.length > 0 && (
+        {mode === "expert" && getProp<Array<{ feature1: string; feature2: string; correlation: number }>>("feature_correlations") && (getProp<Array<{ feature1: string; feature2: string; correlation: number }>>("feature_correlations") || []).length > 0 && (
           <div className="mb-4 space-y-2">
             <h3 className="text-xs font-semibold text-white/80 uppercase tracking-wider">
               Feature Correlations
             </h3>
             <div className="space-y-1 max-h-40 overflow-y-auto">
-              {planet.feature_correlations.map((corr: any, idx: number) => (
+              {(getProp<Array<{ feature1: string; feature2: string; correlation: number }>>("feature_correlations") || []).map((corr, idx: number) => (
                 <div key={idx} className="flex items-center justify-between text-xs p-2 bg-white/5 rounded">
                   <span className="text-white/60 flex-1 truncate">
                     {corr.feature1} ↔ {corr.feature2}
