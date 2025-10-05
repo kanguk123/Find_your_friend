@@ -73,7 +73,7 @@ function CameraRig() {
   useFrame(() => {
     // 디버그: keysPressed 상태 확인
     const currentKeysPressed = useStore.getState().keysPressed;
-    const anyKey = Object.values(currentKeysPressed).some(v => v);
+    const anyKey = Object.values(currentKeysPressed).some((v) => v);
     if (anyKey && mode === "expert") {
       console.log("useFrame - keysPressed:", currentKeysPressed);
     }
@@ -119,30 +119,35 @@ function CameraRig() {
       const moveSpeed = 0.5; // 이동 속도
 
       // input이 포커스되어 있으면 키보드 입력 무시
-      const isInputFocused = document.body.dataset.inputFocused === 'true';
+      const isInputFocused = document.body.dataset.inputFocused === "true";
 
       // useFrame 내부에서는 최신 상태를 직접 가져와야 함
       const currentKeysPressed = useStore.getState().keysPressed;
 
       // 디버그: 어떤 키가 눌려있는지 확인
-      const anyKeyPressed = Object.values(currentKeysPressed).some(v => v);
+      const anyKeyPressed = Object.values(currentKeysPressed).some((v) => v);
       if (anyKeyPressed) {
-        console.log("Keys pressed:", currentKeysPressed, "mode:", mode, "isInputFocused:", isInputFocused, "dataset.inputFocused:", document.body.dataset.inputFocused);
+        console.log(
+          "Keys pressed:",
+          currentKeysPressed,
+          "mode:",
+          mode,
+          "isInputFocused:",
+          isInputFocused,
+          "dataset.inputFocused:",
+          document.body.dataset.inputFocused
+        );
       }
 
       if (mode === "expert" && !isInputFocused) {
         // Expert 모드: 로켓처럼 카메라 방향 기준으로 이동
 
         // 카메라가 바라보는 방향 벡터
-        const forward = new Vector3()
-          .subVectors(target, cameraPos)
-          .normalize();
+        const forward = new Vector3().subVectors(target, cameraPos).normalize();
 
         // 카메라의 오른쪽 방향 벡터 (forward와 up의 외적)
         const up = new Vector3(0, 1, 0);
-        const right = new Vector3()
-          .crossVectors(forward, up)
-          .normalize();
+        const right = new Vector3().crossVectors(forward, up).normalize();
 
         let moved = false;
 
@@ -187,7 +192,12 @@ function CameraRig() {
           camera.position.copy(newCameraPos);
           target.copy(newTarget);
 
-          console.log("Expert mode camera moved:", newCameraPos, "target:", newTarget);
+          console.log(
+            "Expert mode camera moved:",
+            newCameraPos,
+            "target:",
+            newTarget
+          );
         }
 
         // Expert 모드에서는 항상 OrbitControls 업데이트
@@ -316,7 +326,9 @@ function CameraRig() {
 }
 
 export default function Scene() {
-  const [expandedPanel, setExpandedPanel] = useState<'hyperparameter' | 'model' | null>(null);
+  const [expandedPanel, setExpandedPanel] = useState<
+    "hyperparameter" | "model" | null
+  >(null);
   const {
     mode,
     selectedId,
@@ -336,18 +348,18 @@ export default function Scene() {
   useEffect(() => {
     // 초기값 설정
     if (!document.body.dataset.inputFocused) {
-      document.body.dataset.inputFocused = 'false';
+      document.body.dataset.inputFocused = "false";
     }
 
     // Canvas 클릭 시 input focus 해제
     const handleCanvasClick = () => {
-      document.body.dataset.inputFocused = 'false';
+      document.body.dataset.inputFocused = "false";
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // input이나 textarea가 포커스되어 있으면 키보드 이벤트 무시
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
         return;
       }
 
@@ -424,7 +436,7 @@ export default function Scene() {
     const handleKeyUp = (e: KeyboardEvent) => {
       // input이나 textarea가 포커스되어 있으면 키보드 이벤트 무시
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
         return;
       }
 
@@ -512,37 +524,38 @@ export default function Scene() {
       </div>
 
       {/* Planet 정보 카드 */}
-      {selectedId && (() => {
-        // 외계행성: selectedPlanetData 사용
-        if (showPlanetCard && selectedPlanetData) {
-          return (
-            <PlanetCard
-              planet={selectedPlanetData}
-              onClose={() => setShowPlanetCard(false)}
-            />
-          );
-        }
-
-        // 태양계 행성: planets에서 찾아서 표시
-        if (!selectedId.startsWith("exo-")) {
-          const { planets: storePlanets } = useStore.getState();
-          const solarPlanet = storePlanets.find(p => p.id === selectedId);
-
-          if (solarPlanet) {
+      {selectedId &&
+        (() => {
+          // 외계행성: selectedPlanetData 사용
+          if (showPlanetCard && selectedPlanetData) {
             return (
               <PlanetCard
-                planet={solarPlanet}
-                onClose={() => {
-                  setSelectedId(undefined);
-                  setShowPlanetCard(false);
-                }}
+                planet={selectedPlanetData}
+                onClose={() => setShowPlanetCard(false)}
               />
             );
           }
-        }
 
-        return null;
-      })()}
+          // 태양계 행성: planets에서 찾아서 표시
+          if (!selectedId.startsWith("exo-")) {
+            const { planets: storePlanets } = useStore.getState();
+            const solarPlanet = storePlanets.find((p) => p.id === selectedId);
+
+            if (solarPlanet) {
+              return (
+                <PlanetCard
+                  planet={solarPlanet}
+                  onClose={() => {
+                    setSelectedId(undefined);
+                    setShowPlanetCard(false);
+                  }}
+                />
+              );
+            }
+          }
+
+          return null;
+        })()}
 
       {/* 좌측 하단 - ESC 키 안내 */}
       <div className="pointer-events-none absolute bottom-20 left-3 z-40 space-y-3">
@@ -575,14 +588,20 @@ export default function Scene() {
         <div className="pointer-events-none absolute top-16 right-3 z-50 w-80 space-y-3 max-h-[calc(100vh-16rem)] overflow-y-auto">
           <div className="pointer-events-auto">
             <HyperparameterPanel
-              isExpanded={expandedPanel === 'hyperparameter'}
-              onToggle={() => setExpandedPanel(expandedPanel === 'hyperparameter' ? null : 'hyperparameter')}
+              isExpanded={expandedPanel === "hyperparameter"}
+              onToggle={() =>
+                setExpandedPanel(
+                  expandedPanel === "hyperparameter" ? null : "hyperparameter"
+                )
+              }
             />
           </div>
           <div className="pointer-events-auto">
             <ModelAccuracy
-              isExpanded={expandedPanel === 'model'}
-              onToggle={() => setExpandedPanel(expandedPanel === 'model' ? null : 'model')}
+              isExpanded={expandedPanel === "model"}
+              onToggle={() =>
+                setExpandedPanel(expandedPanel === "model" ? null : "model")
+              }
             />
           </div>
         </div>
@@ -598,7 +617,7 @@ export default function Scene() {
 
       {/* Data Training 버튼 - 하단 중앙 (Expert 모드에서만 표시) */}
       {mode === "expert" && (
-        <div className="pointer-events-none absolute bottom-3 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="pointer-events-none absolute bottom-8 left-1/2 transform -translate-x-1/2 z-50">
           <div className="pointer-events-auto">
             <Link
               href="/training"
@@ -617,7 +636,7 @@ export default function Scene() {
                   d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
                 />
               </svg>
-              Data Training
+              Input Data
             </Link>
           </div>
         </div>
@@ -706,17 +725,31 @@ function CoinCounter() {
 
   return (
     <div className="pointer-events-none absolute top-3 right-3 z-50">
-      <div className={`pointer-events-auto bg-black/70 border border-yellow-500/50 rounded-xl p-4 backdrop-blur-sm transition-all duration-300 ${showPulse ? 'scale-110 border-yellow-400' : ''}`}>
+      <div
+        className={`pointer-events-auto bg-black/70 border border-yellow-500/50 rounded-xl p-4 backdrop-blur-sm transition-all duration-300 ${
+          showPulse ? "scale-110 border-yellow-400" : ""
+        }`}
+      >
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 relative">
-            <span className={`text-3xl transition-transform duration-300 ${showPulse ? 'scale-125 rotate-12' : ''}`}>🪙</span>
+            <span
+              className={`text-3xl transition-transform duration-300 ${
+                showPulse ? "scale-125 rotate-12" : ""
+              }`}
+            >
+              🪙
+            </span>
             {showCoinFloat && (
               <div className="absolute top-0 left-0 animate-coin-float pointer-events-none">
                 <span className="text-2xl">+1</span>
               </div>
             )}
             <div>
-              <div className={`text-yellow-400 text-2xl font-bold transition-all duration-300 ${showPulse ? 'scale-110' : ''}`}>
+              <div
+                className={`text-yellow-400 text-2xl font-bold transition-all duration-300 ${
+                  showPulse ? "scale-110" : ""
+                }`}
+              >
                 {coinCount}
               </div>
               <div className="text-white/60 text-xs">Coins</div>
@@ -753,7 +786,7 @@ function CoinCounter() {
 
         .animate-coin-float {
           animation: coin-float 1s ease-out forwards;
-          color: #FFD700;
+          color: #ffd700;
           font-weight: bold;
           text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
         }
